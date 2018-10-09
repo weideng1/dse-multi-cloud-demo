@@ -40,17 +40,21 @@ ENV PATH=/root/.local/bin/:${PATH}
 RUN echo $PATH
 
 COPY ./config config
+COPY ./config/.aws/ /root/.aws
 
 # Check login AWS
 #RUN aws ec2 describe-instances
 
 # Login gcloud
-RUN gcloud auth activate-service-account --key-file=config/gcloud/gcloud-service-key.json
+#RUN gcloud auth activate-service-account --key-file=config/gcloud/gcloud-service-key.json
 
 # Login azure
-RUN AZ_USER=$(head -1 config/azure/creds.txt)
-RUN AZ_PASSWORD=$(tail -1 config/azure/creds.txt)
-RUN az login -u $AZ_USER -p $AZ_PASSWORD
+#RUN AZ_USER=$(head -1 config/azure/creds.txt)
+#RUN AZ_PASSWORD=$(tail -1 config/azure/creds.txt)
+#RUN az login -u $AZ_USER -p $AZ_PASSWORD
 
 RUN git clone https://github.com/phact/dse-multi-cloud-demo.git
 
+RUN /dse-multi-cloud-demo/iaas/deploy_aws.sh
+#RUN /dse-multi-cloud-demo/iaas/deploy_azure.sh
+#RUN /dse-multi-cloud-demo/iaas/deploy_gcp.sh
