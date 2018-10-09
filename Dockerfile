@@ -35,8 +35,22 @@ RUN echo java --version
 
 # AWS cli
 RUN pip install awscli --upgrade --user
-
 RUN echo 'PATH=/root/.local/bin/:$PATH' >> /root/.bashrc
+ENV PATH=/root/.local/bin/:${PATH}
+RUN echo $PATH
+
+COPY ./config config
+
+# Check login AWS
+#RUN aws ec2 describe-instances
+
+# Login gcloud
+RUN gcloud auth activate-service-account --key-file=config/gcloud/gcloud-service-key.json
+
+# Login azure
+RUN AZ_USER=$(head -1 config/azure/creds.txt)
+RUN AZ_PASSWORD=$(tail -1 config/azure/creds.txt)
+RUN az login -u $AZ_USER -p $AZ_PASSWORD
 
 RUN git clone https://github.com/phact/dse-multi-cloud-demo.git
 
