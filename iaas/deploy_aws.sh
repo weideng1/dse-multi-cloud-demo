@@ -1,5 +1,7 @@
 #!/bin/bash
 
+
+currentdir=`dirname $0`
 region='us-west-2'
 stackname='multi'
 usage="---------------------------------------------------
@@ -40,8 +42,8 @@ aws cloudformation create-stack  \
 --stack-name $stackname  \
 --disable-rollback  \
 --capabilities CAPABILITY_IAM  \
---template-body file://$(pwd)/aws/datacenter.template  \
---parameters file://$(pwd)/aws/params.json
+--template-body file://${currentdir}/aws/datacenter.template  \
+--parameters file://${currentdir}/aws/params.json
 echo "Waiting for stack to complete..."
 sleep 30s #avoid fail?
 aws cloudformation wait stack-create-complete --stack-name $stackname

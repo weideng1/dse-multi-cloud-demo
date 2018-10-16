@@ -2,3 +2,4 @@ nohup.out
 */target
 */.idea
 *.iml
+.aws/

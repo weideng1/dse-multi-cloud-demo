@@ -17,7 +17,6 @@ Options:
  -d deployment-name : name of GCP gcloud deployment to delete
 
 ---------------------------------------------------"
-region='us-west-2' #default region
 
 while getopts 'hr:g:s:d:' opt; do
   case $opt in

@@ -2,6 +2,10 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "Datastax template, License: Apache 2.0 (Please do not remove) May,30,2017 (qs-1nbqhl4uk)",
     "Parameters": {
+        "CreateUser": {
+            "Description": "Create User email",
+            "Type": "String"
+        },
         "KeyName": {
             "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
             "Type": "AWS::EC2::KeyPair::KeyName",
@@ -422,6 +426,18 @@
                 "MaxSize": {
                     "Ref": "DataCenterSize"
                 },
+                "Tags" : [
+                {
+                  "Key" : "deployer-app",
+                  "Value" : "assethub",
+                  "PropagateAtLaunch" : true
+                },
+                {
+                  "Key" : "create_user",
+                  "Value" : { "Ref" : "CreateUser" } ,
+                  "PropagateAtLaunch" : true
+                }
+                ],
                 "VPCZoneIdentifier": {
                     "Ref": "Subnets"
                 }

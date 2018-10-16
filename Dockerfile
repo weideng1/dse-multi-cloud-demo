@@ -6,7 +6,7 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     # Install add-apt-repository
     apt-get install -y \
-        software-properties-common curl apt-transport-https python-pip groff less && \
+        software-properties-common curl apt-transport-https python-pip groff less jq && \
     apt-get update
 
 # Azure sources.list
@@ -46,15 +46,20 @@ COPY ./config/.aws/ /root/.aws
 #RUN aws ec2 describe-instances
 
 # Login gcloud
-#RUN gcloud auth activate-service-account --key-file=config/gcloud/gcloud-service-key.json
+RUN gcloud auth activate-service-account --key-file=/config/gcloud/gcloud-service-key.json
+RUN cat /config/gcloud/gcloud-service-key.json | jq ".project_id" | xargs gcloud config set project 
+#RUN gcloud config set project asset-hub-168516
+# gcloud auth activate-service-account asset-hub@asset-hub-168516.iam.gserviceaccount.com --key-file=../../config/gcloud/gcloud-service-key.json
 
 # Login azure
 #RUN AZ_USER=$(head -1 config/azure/creds.txt)
 #RUN AZ_PASSWORD=$(tail -1 config/azure/creds.txt)
 #RUN az login -u $AZ_USER -p $AZ_PASSWORD
 
-RUN git clone https://github.com/phact/dse-multi-cloud-demo.git
+#RUN git clone https://github.com/phact/dse-multi-cloud-demo.git
+COPY ./ /dse-multi-cloud-demo/
 
-RUN /dse-multi-cloud-demo/iaas/deploy_aws.sh
+
+#RUN cd /dse-multi-cloud-demo/iaas && ./deploy_aws.sh
 #RUN /dse-multi-cloud-demo/iaas/deploy_azure.sh
 #RUN /dse-multi-cloud-demo/iaas/deploy_gcp.sh
