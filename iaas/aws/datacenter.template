@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Datastax template, License: Apache 2.0 (Please do not remove) May,30,2017 (qs-1nbqhl4uk)",
+    "Description": "Datastax template",
     "Parameters": {
         "CreateUser": {
             "Description": "Create User email",
