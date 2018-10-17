@@ -37,7 +37,6 @@ RUN echo java --version
 RUN pip install awscli --upgrade --user
 RUN echo 'PATH=/root/.local/bin/:$PATH' >> /root/.bashrc
 ENV PATH=/root/.local/bin/:${PATH}
-RUN echo $PATH
 
 COPY ./config config
 COPY ./config/.aws/ /root/.aws
@@ -63,6 +62,9 @@ RUN cat config/azure/creds.txt | awk '{system( "az login --service-principal -u 
 COPY ./ /dse-multi-cloud-demo/
 
 
+RUN cd dse-multi-cloud-demo/app && mvn clean package
+
+RUN cd dse-multi-cloud-demo/app && nohup java -jar target/multi-cloud-service.jar server conf/multi-cloud-service-conf.yaml &
 #RUN cd /dse-multi-cloud-demo/iaas && ./deploy_aws.sh
 #RUN /dse-multi-cloud-demo/iaas/deploy_azure.sh
 #RUN /dse-multi-cloud-demo/iaas/deploy_gcp.sh
