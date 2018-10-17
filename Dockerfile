@@ -52,9 +52,12 @@ RUN cat /config/gcloud/gcloud-service-key.json | jq ".project_id" | xargs gcloud
 # gcloud auth activate-service-account asset-hub@asset-hub-168516.iam.gserviceaccount.com --key-file=../../config/gcloud/gcloud-service-key.json
 
 # Login azure
-#RUN AZ_USER=$(head -1 config/azure/creds.txt)
-#RUN AZ_PASSWORD=$(tail -1 config/azure/creds.txt)
+#ARG AZ_TENNANT=$(head -1 config/azure/creds.txt)
+#ARG AZ_APP_ID=$(tail -2 config/azure/creds.txt | head -1)
+#ARG AZ_KEY=$(tail -1 config/azure/creds.txt)
 #RUN az login -u $AZ_USER -p $AZ_PASSWORD
+RUN cat config/azure/creds.txt | awk '{system( "az login --service-principal -u " $2 " -p " $3 " --tenant " $1 )}'
+#echo az login --service-principal -u $AZ_APP_ID -p $AZ_KEY --tenant $AZ_TENNANT
 
 #RUN git clone https://github.com/phact/dse-multi-cloud-demo.git
 COPY ./ /dse-multi-cloud-demo/
