@@ -32,6 +32,12 @@
     "namespace": {
       "type": "string"
     },
+    "org": {
+      "type": "string"
+    },
+    "createUser": {
+      "type": "string"
+    },
     "publicIpOnNodes": {
       "type": "string",
       "allowedValues": [
@@ -217,6 +223,11 @@
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat(parameters('namespace'), 'vm', copyindex())]",
       "location": "[parameters('location')]",
+      "tags": {
+        "deployer-app": "assethub",
+        "create_user": "[parameters('createUser')]",
+        "org": "[parameters('org')]"
+      },
       "copy": {
         "name": "[concat(parameters('namespace'), 'vmLoop')]",
         "count": "[parameters('nodeCount')]"

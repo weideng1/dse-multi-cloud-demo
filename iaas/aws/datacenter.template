@@ -436,6 +436,11 @@
                   "Key" : "create_user",
                   "Value" : { "Ref" : "CreateUser" } ,
                   "PropagateAtLaunch" : true
+                },
+                {
+                  "Key" : "org",
+                  "Value" : { "Ref" : "Org" } ,
+                  "PropagateAtLaunch" : true
                 }
                 ],
                 "VPCZoneIdentifier": {

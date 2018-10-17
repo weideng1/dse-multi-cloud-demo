@@ -4,6 +4,10 @@
     "ParameterValue": "sebastian.estevez@datastax.com"
   },
   {
+    "ParameterKey": "Org",
+    "ParameterValue": "presales"
+  },
+  {
     "ParameterKey": "KeyName",
     "ParameterValue": "assethubkey"
   },
