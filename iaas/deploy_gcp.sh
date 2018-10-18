@@ -28,4 +28,4 @@ while getopts 'hd:' opt; do
 done
 
 echo "Deploying 'clusterParameters.yaml' in GCP gcloud deployment: $deploy"
-gcloud deployment-manager deployments create $deploy --config ./gcp/clusterParameters.yaml --labels delpoyer-app=assethub,create_user=sebastian.estevez@datastax.com,org=presales
+gcloud deployment-manager deployments create $deploy --config ./gcp/clusterParameters.yaml --labels delpoyer-app=assethub,create_user=sebastian_estevez_datastax_com,org=presales

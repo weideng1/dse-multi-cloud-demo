@@ -60,4 +60,55 @@ public class MultiCloudServiceResource {
 
         return runPB(pb);
     }
+    @GET
+    @Timed
+    @Path("/create-gcp")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String createGcpDeployment(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
+        if (region == null || deploymentName == null){
+            return "please provide region and deploymentName as query parameters";
+        }
+        // the region for gcp right now is hard coded in the params file
+        ProcessBuilder pb = new ProcessBuilder("./deploy_gcp.sh", "-d", deploymentName);
+
+        return runPB(pb);
+    }
+
+    @GET
+    @Timed
+    @Path("/terminate-gcp")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String terminateGcpDeployment(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
+        if (region == null || deploymentName == null){
+            return "please provide region and deploymentName as query parameters";
+        }
+        ProcessBuilder pb = new ProcessBuilder("./teardown.sh", "-r", region, "-d", deploymentName);
+
+        return runPB(pb);
+    }
+    @GET
+    @Timed
+    @Path("/create-azure")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String createAzureDeployment(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
+        if (region == null || deploymentName == null){
+            return "please provide region and deploymentName as query parameters";
+        }
+        ProcessBuilder pb = new ProcessBuilder("./deploy_azure.sh", "-l", region, "-g", deploymentName);
+
+        return runPB(pb);
+    }
+
+    @GET
+    @Timed
+    @Path("/terminate-azure")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String terminateAzureDeployment(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
+        if (region == null || deploymentName == null){
+            return "please provide region and deploymentName as query parameters";
+        }
+        ProcessBuilder pb = new ProcessBuilder("./teardown.sh", "-r", region, "-g", deploymentName);
+
+        return runPB(pb);
+    }
 }
