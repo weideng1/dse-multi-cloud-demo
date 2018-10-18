@@ -3,5 +3,6 @@ nohup.out
 */.idea
 *.iml
 .credentials
+credentials
 gcloud-service-key.json
 creds.txt

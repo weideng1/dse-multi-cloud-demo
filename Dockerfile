@@ -64,7 +64,7 @@ COPY ./ /dse-multi-cloud-demo/
 
 RUN cd dse-multi-cloud-demo/app && mvn clean package
 
-RUN cd dse-multi-cloud-demo/app && nohup java -jar target/multi-cloud-service.jar server conf/multi-cloud-service-conf.yaml &
+CMD cd dse-multi-cloud-demo/app && java -jar target/multi-cloud-service.jar server conf/multi-cloud-service-conf.yaml
 #RUN cd /dse-multi-cloud-demo/iaas && ./deploy_aws.sh
 #RUN /dse-multi-cloud-demo/iaas/deploy_azure.sh
 #RUN /dse-multi-cloud-demo/iaas/deploy_gcp.sh
