@@ -3,12 +3,14 @@ package com.datastax.powertools.resources;
 import com.codahale.metrics.annotation.Timed;
 import com.datastax.powertools.MultiCloudServiceConfig;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.logging.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -110,5 +112,43 @@ public class MultiCloudServiceResource {
         ProcessBuilder pb = new ProcessBuilder("./teardown.sh", "-r", region, "-g", deploymentName);
 
         return runPB(pb);
+    }
+
+    @GET
+    @Timed
+    @Path("/create-multi-cloud")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String createMultiCloudDeployment(@QueryParam("deploymentName") String deploymentName) {
+        String result = "AWS: \n" + createAwsDeployment(deploymentName, "us-east-2");
+        result += "\nGCP: \n" + createGcpDeployment(deploymentName, "ignored");
+        result += "\nAzure: " + createAzureDeployment(deploymentName, "westus2");
+
+       return result;
+    }
+
+    @GET
+    @Timed
+    @Path("/terminate-multi-cloud")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String terminateMultiCloudDeployment(@QueryParam("deploymentName") String deploymentName) {
+        CompletableFuture<String> awsFuture
+                = CompletableFuture.supplyAsync(() -> "AWS: \n" + terminateAwsDeployment(deploymentName, "us-east-2"));
+        CompletableFuture<String> gcpFuture
+                = CompletableFuture.supplyAsync(() -> "\nGCP: \n" + terminateGcpDeployment(deploymentName, "ignored"));
+        CompletableFuture<String> azureFuture
+                = CompletableFuture.supplyAsync(() -> "\nAzure:\n " + terminateAzureDeployment(deploymentName, "westus2"));
+
+        CompletableFuture<Void> combinedFuture
+                = CompletableFuture.allOf(awsFuture, gcpFuture, azureFuture);
+
+        try {
+            String combined = Stream.of(awsFuture, gcpFuture, azureFuture)
+                    .map(CompletableFuture::join)
+                    .collect(Collectors.joining(""));
+            return combined;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
