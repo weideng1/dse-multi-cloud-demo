@@ -665,6 +665,14 @@
                         "CidrIp": {
                             "Ref": "SecurityCIDR"
                         }
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "CidrIp": {
+                            "FromPort": "8",
+                            "ToPort": "-1",
+                            "Ref": "SecurityCIDR"
+                        }
                     }
                 ]
             }
