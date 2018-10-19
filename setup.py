@@ -39,7 +39,7 @@ repo_pass = os.environ.get('academy_pass').strip()
 download_token = os.environ.get('academy_token').strip()
 
 #SSH into the OpsCenter/LCM server, install the JDK, install OpsCenter
-bashCommand = 'ssh -o StrictHostKeyChecking=accept-new -i '+ ssh_key+ ' '+ username+'@'+server_ip+' \'sudo apt-get install -y python software-properties-common; \
+bashCommand = 'ssh -o StrictHostKeyChecking=no -i '+ ssh_key+ ' '+ username+'@'+server_ip+' \'sudo apt-get install -y python software-properties-common; \
 sudo apt-add-repository -y ppa:webupd8team/java; \
 sudo apt-get update; \
 echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | sudo debconf-set-selections; \
@@ -140,8 +140,8 @@ cluster_id = make_cluster_response['id']
 
 data_centers = set()
 
-with open(server_list, 'r') as server_list_file:
-    server_list = server_list_file.read().split()
+print(server_list)
+server_list = server_list.split(";")
 
 for host in server_list:
     data_centers.add(host.split(":")[2])

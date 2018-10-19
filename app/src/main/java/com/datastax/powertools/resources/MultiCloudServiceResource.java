@@ -3,12 +3,14 @@ package com.datastax.powertools.resources;
 import com.codahale.metrics.annotation.Timed;
 import com.datastax.powertools.MultiCloudServiceConfig;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.ws.rs.GET;
@@ -128,6 +130,56 @@ public class MultiCloudServiceResource {
         return runPB(pb);
     }
 
+    @GET
+    @Timed
+    @Path("/lcm-install-deployment")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String lcmInstallDeployment(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
+        if (region == null)
+            region = "us-east-2";
+        if (deploymentName == null)
+            return "please provide deploymentName as a query parameter";
+        String ips = gatherIps(deploymentName, region);
+
+        logger.info("IP Addresses (raw): \n" + ips);
+        logger.info("IP Addresses (escape utils): \n"+StringEscapeUtils.escapeJava(ips));
+
+
+        return lcmInstallIps(ips);
+    }
+
+    @GET
+    @Timed
+    @Path("/lcm-install-ips")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String lcmInstallIps(@QueryParam("ips") String ips) {
+        ips = ips.replaceAll("\n", ";");
+
+        logger.info("IP Addresses (replaced): \n" + ips);
+
+        Pattern p = Pattern.compile("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}");   // the pattern to search for
+        Matcher m = p.matcher(ips);
+
+        String lcmIp = "";
+        if (m.find()) {
+            lcmIp = m.group(0);
+        }
+
+        logger.info("LCM IP: \n" + lcmIp);
+
+        ProcessBuilder pb = new ProcessBuilder(
+                "python",
+                "../setup.py",
+                "-lcm", lcmIp,
+                "-u", "ubuntu",
+                // TODO: this needs to be dynamic at some point
+                "-k", "/dse-multi-cloud-demo/config/assethubkey",
+                // TODO: make dynamic
+                "-n", "dse-cluster",
+                "-s", ips);
+
+        return runPB(pb);
+    }
 
     @GET
     @Timed
