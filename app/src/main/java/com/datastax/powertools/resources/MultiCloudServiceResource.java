@@ -116,14 +116,40 @@ public class MultiCloudServiceResource {
 
     @GET
     @Timed
+    @Path("/gather-ips")
+    @Produces(MediaType.APPLICATION_JSON)
+    public String gatherIps(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
+        if (region == null)
+            region = "us-east-2";
+        if (deploymentName == null)
+            return "please provide deploymentName as a query parameter";
+        ProcessBuilder pb = new ProcessBuilder("./gather_ips.sh", "-r", region, "-s", deploymentName, "-d", deploymentName, "-g", deploymentName);
+
+        return runPB(pb);
+    }
+
+
+    @GET
+    @Timed
     @Path("/create-multi-cloud")
     @Produces(MediaType.APPLICATION_JSON)
     public String createMultiCloudDeployment(@QueryParam("deploymentName") String deploymentName) {
-        String result = "AWS: \n" + createAwsDeployment(deploymentName, "us-east-2");
-        result += "\nGCP: \n" + createGcpDeployment(deploymentName, "ignored");
-        result += "\nAzure: " + createAzureDeployment(deploymentName, "westus2");
+        CompletableFuture<String> awsFuture
+                = CompletableFuture.supplyAsync(() -> "AWS: \n" + createAwsDeployment(deploymentName, "us-east-2"));
+        CompletableFuture<String> gcpFuture
+                = CompletableFuture.supplyAsync(() -> "\nGCP: \n" + createGcpDeployment(deploymentName, "ignored"));
+        CompletableFuture<String> azureFuture
+                = CompletableFuture.supplyAsync(() -> "\nAzure:\n " + createAzureDeployment(deploymentName, "westus2"));
 
-       return result;
+        try {
+            String combined = Stream.of(awsFuture, gcpFuture, azureFuture)
+                    .map(CompletableFuture::join)
+                    .collect(Collectors.joining(""));
+            return combined;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @GET
@@ -137,9 +163,6 @@ public class MultiCloudServiceResource {
                 = CompletableFuture.supplyAsync(() -> "\nGCP: \n" + terminateGcpDeployment(deploymentName, "ignored"));
         CompletableFuture<String> azureFuture
                 = CompletableFuture.supplyAsync(() -> "\nAzure:\n " + terminateAzureDeployment(deploymentName, "westus2"));
-
-        CompletableFuture<Void> combinedFuture
-                = CompletableFuture.allOf(awsFuture, gcpFuture, azureFuture);
 
         try {
             String combined = Stream.of(awsFuture, gcpFuture, azureFuture)
