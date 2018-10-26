@@ -668,9 +668,9 @@
                     },
                     {
                         "IpProtocol": "icmp",
+                        "FromPort": "8",
+                        "ToPort": "-1",
                         "CidrIp": {
-                            "FromPort": "8",
-                            "ToPort": "-1",
                             "Ref": "SecurityCIDR"
                         }
                     }
