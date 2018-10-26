@@ -35,5 +35,5 @@ echo "Deploying 'clusterParameters.yaml' in GCP gcloud deployment: $deploy"
 if [ -z $parameters ]; then
     gcloud deployment-manager deployments create $deploy --config ./gcp/clusterParameters.yaml --labels delpoyer-app=assethub,create_user=sebastian_estevez_datastax_com,org=presales
 else
-    gcloud deployment-manager deployments create $deploy --labels delpoyer-app=assethub,create_user=sebastian_estevez_datastax_com,org=presales --properties ${params}
+    gcloud deployment-manager deployments create $deploy --config ./gcp/clusterParameters.yaml --labels delpoyer-app=assethub,create_user=sebastian_estevez_datastax_com,org=presales --properties ${params}
 fi
