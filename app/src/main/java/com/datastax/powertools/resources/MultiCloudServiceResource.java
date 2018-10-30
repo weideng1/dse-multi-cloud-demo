@@ -92,6 +92,7 @@ public class MultiCloudServiceResource {
     @Timed
     @Path("/create-gcp")
     @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
     public String createGcpDeployment(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region, HashMap<String, String> params) {
         if (region == null || deploymentName == null){
             return "please provide region and deploymentName as query parameters";
@@ -99,7 +100,7 @@ public class MultiCloudServiceResource {
         String paramString = paramsToGCPString(params);
 
         // the region for gcp right now is hard coded in the params file
-        ProcessBuilder pb = new ProcessBuilder("./deploy_gcp.sh", "-d", deploymentName);
+        ProcessBuilder pb = new ProcessBuilder("./deploy_gcp.sh", "-d", deploymentName, "-p", paramString);
 
         return runPB(pb);
     }
@@ -115,7 +116,7 @@ public class MultiCloudServiceResource {
                 "sshKeyValue: 'AAAAB3NzaC1yc2EAAAADAQABAAACAQCzmNOzPiUcl45ZOJSh/5kUU7dmm3xUp+j++l9zLxLov/De9RukvHWPTRNtAHdWR0EatTSqsmlvDUm8UkKVuPdQ223MiZYlL53Q3ZXzGnAzShtbL8VIMvH+9jlaNM/yfA6Ox4jE/sLcoy5giML0/3LNkzqHTJVxmGpAqUt4DJL6MfIpbOLBhdDJVKuVO2ERS/k55hekvnhKRqlKICMt62MzoR78poZM8CmbMOs3YgJDqumXaJRaUKtWBbhGmdU6hf2Jd3TRoI6V8rwrR40HZrdtSi2ECc1HRRwO1EIJ61Q924TFfrY8M+fGnmy15jmXBWcja+yOkyQV9K/GdUs9yHvmaW+svSzCpAatvny+ccxR+6bU9H6M7Tab2uuP3tpS+seCeD5+OADCaCQz8sdcTmrtTNQhUcTKgaD1ONkNQE6Fth8OLxPfDsyl5pNv1gXZU5uRCUIgBJXNsA92KltcI3ltsl9BXbkH9Bcum+Uhf/66/24/sr9LzpRyOjkGxk4lwKZUZ19jPx4O03hWDAeCwFCesqDu0P2rX3xbUPwSgPTdjyR9bzkPNret8zD+oNPMWKISPy43atDUgR04/vmsjW0/6EUb/l7vX8vYVta3S2l1c9OsAkGdhg/xxw0N44jGG65wYQ0HttbrzSdHULIOe2lfe9KsLEWXjVcSQIJdT1s9CQ=='\"";
         String labels = " --labels ";
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
-            if (paramKV.getKey().equals("deployer-app") || paramKV.getKey().equals("create_user") || paramKV.getKey().equals("org")){
+            if (paramKV.getKey().equals("deployerapp") || paramKV.getKey().equals("createuser") || paramKV.getKey().equals("org")){
                 labels += String.format("%s=%s,", paramKV.getKey(), paramKV.getValue());
             }else {
                 paramsString+= String.format("%s:%s,", paramKV.getKey(), paramKV.getValue());
@@ -142,6 +143,7 @@ public class MultiCloudServiceResource {
     @Timed
     @Path("/create-azure")
     @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
     public String createAzureDeployment(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region, HashMap<String, String> params) {
         if (region == null || deploymentName == null){
             return "please provide region and deploymentName as query parameters";
