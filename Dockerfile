@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 MAINTAINER Sebastian Estevez estevezsebastian@gmail.com
 
 # Install all apt-get utils and required repos
@@ -6,7 +6,8 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     # Install add-apt-repository
     apt-get install -y \
-        software-properties-common curl apt-transport-https python-pip groff less jq && \
+         # default-jdk i.e. openjdk 11
+        software-properties-common curl apt-transport-https python-pip groff less jq default-jdk  && \
     apt-get update
 
 # Azure sources.list
@@ -27,11 +28,7 @@ RUN apt-get update && apt-get install -y \
     apt-transport-https azure-cli \
     google-cloud-sdk
 
-RUN add-apt-repository ppa:openjdk-r/ppa
-
-RUN apt-get install -y openjdk-8-jdk 
-
-RUN echo java --version
+RUN java -version
 
 # AWS cli
 RUN pip install awscli --upgrade --user
