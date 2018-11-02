@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 rg='multi'
 loc="westus"
 usage="---------------------------------------------------
@@ -49,13 +51,13 @@ az group deployment create \
 --template-file ./azure/template-vnet.json \
 --verbose
 
-if [ -z $parameters ]; then
-  $parameters="@./azure/params.json"
+if [ -z "$parameters" ]; then
+  parameters="@./azure/params.json"
 fi
 
 az group deployment create \
 --resource-group $rg \
 --template-file ./azure/nodes.json \
---parameters ${parameters} \
+--parameters "${parameters}" \
 --parameters '{"uniqueString": {"value": "'$rand'"}}' \
 --verbose
