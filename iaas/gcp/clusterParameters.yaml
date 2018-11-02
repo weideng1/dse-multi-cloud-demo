@@ -5,8 +5,8 @@ resources:
 - name: datastax
   type: datastax.py
   properties:
-    zones:
-    - us-east1-b
+    # : delimited list
+    zones: us-east1-b
     network: default
     machineType: n1-standard-2
     nodesPerZone: 3
