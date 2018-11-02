@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -56,23 +58,58 @@ public class MultiCloudServiceResource {
         return runPB(pb);
     }
 
+    /*
+    An error occurred (ValidationError) when calling the CreateStack operation: Parameters:
+    [org, startup_parameter, createuser, class_type, num_tokens, repo_uri, deployerapp,
+    user, instance_type, num_clusters] do not exist in the template
++ echo 'Waiting for stack to complete...'
+    */
+
     private String paramsToAWSString(HashMap<String, String> params) {
-        String paramString = "\""+
+        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
+        Map<String, String> swapKeys = Map.of(
+                "org", "Org",
+                "deployerapp", "DeployerApp",
+                "nodes_aws", "DataCenterSize",
+                "createuser", "CreateUser"
+                );
+
+        String paramString =
                 "ParameterKey=KeyName,ParameterValue=assethubkey " +
                 "ParameterKey=VPC,ParameterValue=vpc-75c83d1c " +
-                "ParameterKey=AvailabilityZones,ParameterValue=us-east-2a,us-east-2b,us-east-2c " +
-                "ParameterKey=Subnets,ParameterValue=subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4 ";
-        for (Map.Entry<String, String> paramKV : params.entrySet()) {
-            paramString+= String.format("\""+ "ParameterKey=%s,ParameterValue=%s ", paramKV.getKey(), paramKV.getValue());
+                "ParameterKey=AvailabilityZones,ParameterValue='us-east-2a,us-east-2b,us-east-2c' " +
+                "ParameterKey=Subnets,ParameterValue='subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4' ";
+
+        // You can name loops in java in order to continue / break from the right loop when loops are nested
+        paramLoop: for (Map.Entry<String, String> paramKV : params.entrySet()) {
+            for (Map.Entry<String, String> swapEntry : swapKeys.entrySet()) {
+                if (paramKV.getKey() == swapEntry.getKey()){
+                    paramString += String.format("ParameterKey=%s,ParameterValue=%s ", swapEntry.getValue(), paramKV.getValue());
+                    continue paramLoop;
+                }
+            }
+            if (paramKV.getKey() == "nodes_aws"){
+                paramString+= String.format("ParameterKey=%s,ParameterValue=%s ", "DataCenterSize", paramKV.getValue());
+            }
+            else if (!extrasAWS.contains(paramKV.getKey())){
+                paramString+= String.format("ParameterKey=%s,ParameterValue=%s ", paramKV.getKey(), paramKV.getValue());
+            }
         }
-        paramString +="\"";
 
         return paramString;
     }
 
     private void validateParams(HashMap<String, String> params) {
-        if(params.get("user") == null){
-            params.put("user", "none");
+        //TODO: make this an option
+        if (params.get("ssh_key") != null){
+            params.remove("ssh_key");
+        }
+        //TODO: make this an option
+        if (params.get("region") != null){
+            params.remove("region");
+        }
+        if(params.get("createuser") == null){
+            params.put("createuser", "none");
         }
     }
 
@@ -97,34 +134,39 @@ public class MultiCloudServiceResource {
         if (region == null || deploymentName == null){
             return "please provide region and deploymentName as query parameters";
         }
-        String paramString = paramsToGCPString(params);
+        Map<String, String> paramsAndLabelsMap = paramsToGCPString(params);
 
         // the region for gcp right now is hard coded in the params file
-        ProcessBuilder pb = new ProcessBuilder("./deploy_gcp.sh", "-d", deploymentName, "-p", paramString);
+        ProcessBuilder pb = new ProcessBuilder("./deploy_gcp.sh", "-d", deploymentName, "-p", paramsAndLabelsMap.get("params"), "-l", paramsAndLabelsMap.get("labels"));
 
         return runPB(pb);
     }
 
-    private String paramsToGCPString(HashMap<String, String> params) {
-        //      --properties "string-key:'string-value',integer-key:12345"
+    private Map<String, String> paramsToGCPString(HashMap<String, String> params) {
+        Map<String, String> paramsAndLabels = new HashMap<>();
+        //String paramsString = "\"zones:'us-east1-b'," +
         String paramsString = "zones:'us-east1-b'," +
-                "network: 'default'," +
-                "machineType: 'n1-standard-2'," +
-                "nodesPerZone: 3," +
-                "dataDiskType: 'pd-ssd'," +
-                "diskSize: 60," +
-                "sshKeyValue: 'AAAAB3NzaC1yc2EAAAADAQABAAACAQCzmNOzPiUcl45ZOJSh/5kUU7dmm3xUp+j++l9zLxLov/De9RukvHWPTRNtAHdWR0EatTSqsmlvDUm8UkKVuPdQ223MiZYlL53Q3ZXzGnAzShtbL8VIMvH+9jlaNM/yfA6Ox4jE/sLcoy5giML0/3LNkzqHTJVxmGpAqUt4DJL6MfIpbOLBhdDJVKuVO2ERS/k55hekvnhKRqlKICMt62MzoR78poZM8CmbMOs3YgJDqumXaJRaUKtWBbhGmdU6hf2Jd3TRoI6V8rwrR40HZrdtSi2ECc1HRRwO1EIJ61Q924TFfrY8M+fGnmy15jmXBWcja+yOkyQV9K/GdUs9yHvmaW+svSzCpAatvny+ccxR+6bU9H6M7Tab2uuP3tpS+seCeD5+OADCaCQz8sdcTmrtTNQhUcTKgaD1ONkNQE6Fth8OLxPfDsyl5pNv1gXZU5uRCUIgBJXNsA92KltcI3ltsl9BXbkH9Bcum+Uhf/66/24/sr9LzpRyOjkGxk4lwKZUZ19jPx4O03hWDAeCwFCesqDu0P2rX3xbUPwSgPTdjyR9bzkPNret8zD+oNPMWKISPy43atDUgR04/vmsjW0/6EUb/l7vX8vYVta3S2l1c9OsAkGdhg/xxw0N44jGG65wYQ0HttbrzSdHULIOe2lfe9KsLEWXjVcSQIJdT1s9CQ=='\"";
-        String labels = " --labels ";
+                "network:'default'," +
+                "machineType:'n1-standard-2'," +
+                "dataDiskType:'pd-ssd'," +
+                "diskSize:60," +
+                "sshKeyValue:'AAAAB3NzaC1yc2EAAAADAQABAAACAQCzmNOzPiUcl45ZOJSh/5kUU7dmm3xUp+j++l9zLxLov/De9RukvHWPTRNtAHdWR0EatTSqsmlvDUm8UkKVuPdQ223MiZYlL53Q3ZXzGnAzShtbL8VIMvH+9jlaNM/yfA6Ox4jE/sLcoy5giML0/3LNkzqHTJVxmGpAqUt4DJL6MfIpbOLBhdDJVKuVO2ERS/k55hekvnhKRqlKICMt62MzoR78poZM8CmbMOs3YgJDqumXaJRaUKtWBbhGmdU6hf2Jd3TRoI6V8rwrR40HZrdtSi2ECc1HRRwO1EIJ61Q924TFfrY8M+fGnmy15jmXBWcja+yOkyQV9K/GdUs9yHvmaW+svSzCpAatvny+ccxR+6bU9H6M7Tab2uuP3tpS+seCeD5+OADCaCQz8sdcTmrtTNQhUcTKgaD1ONkNQE6Fth8OLxPfDsyl5pNv1gXZU5uRCUIgBJXNsA92KltcI3ltsl9BXbkH9Bcum+Uhf/66/24/sr9LzpRyOjkGxk4lwKZUZ19jPx4O03hWDAeCwFCesqDu0P2rX3xbUPwSgPTdjyR9bzkPNret8zD+oNPMWKISPy43atDUgR04/vmsjW0/6EUb/l7vX8vYVta3S2l1c9OsAkGdhg/xxw0N44jGG65wYQ0HttbrzSdHULIOe2lfe9KsLEWXjVcSQIJdT1s9CQ==',";
+        String labels = "";
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
             if (paramKV.getKey().equals("deployerapp") || paramKV.getKey().equals("createuser") || paramKV.getKey().equals("org")){
                 labels += String.format("%s=%s,", paramKV.getKey(), paramKV.getValue());
-            }else {
+            }
+            else if (paramKV.getKey().equals("nodes_gcp")){
+                paramsString+= String.format("%s:%s,", "nodesPerZone", paramKV.getValue());
+            }
+            else {
                 paramsString+= String.format("%s:%s,", paramKV.getKey(), paramKV.getValue());
             }
         }
-        paramsString += labels;
+        paramsAndLabels.put("labels", labels.substring(0,labels.length()-1));
+        paramsAndLabels.put("params", paramsString.substring(0,paramsString.length()-1));
 
-        return paramsString;
+        return paramsAndLabels;
     }
 
     @GET
@@ -149,7 +191,7 @@ public class MultiCloudServiceResource {
             return "please provide region and deploymentName as query parameters";
         }
         String paramString = paramsToAzureString(params);
-        ProcessBuilder pb = new ProcessBuilder("./deploy_azure.sh", "-l", region, "-g", deploymentName);
+        ProcessBuilder pb = new ProcessBuilder("./deploy_azure.sh", "-l", region, "-g", deploymentName, "-p", paramString);
 
         return runPB(pb);
     }
@@ -161,13 +203,15 @@ public class MultiCloudServiceResource {
         // \"adminPassword\": {\"value\": \"122130869@qq\"},
         // \"dnsNameForPublicIP\": {\"value\": \"jasontest321\"}}"
         // --template-uri https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/docker-simple-on-ubuntu/azuredeploy.json
+        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type", "num_clusters"));
+        Map<String, String> swapKeys = Map.of(
+                "createuser", "createUser",
+                "nodes_azure", "nodeCount"
+        );
 
         String paramsString = "{\n" +
                 "  \"location\": {\n" +
                 "    \"value\": \"westus\"\n" +
-                "  },\n" +
-                "  \"nodeCount\": {\n" +
-                "    \"value\": 3\n" +
                 "  },\n" +
                 "  \"vmSize\": {\n" +
                 "    \"value\": \"Standard_DS4_v2\"\n" +
@@ -186,13 +230,30 @@ public class MultiCloudServiceResource {
                 "  },\n" +
                 "  \"subnetName\": {\n" +
                 "    \"value\": \"subnet\"\n" +
+                "  },\n" +
+                "  \"sshKeyData\": {\n" +
+                "    \"value\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzmNOzPiUcl45ZOJSh/5kUU7dmm3xUp+j++l9zLxLov/De9RukvHWPTRNtAHdWR0EatTSqsmlvDUm8UkKVuPdQ223MiZYlL53Q3ZXzGnAzShtbL8VIMvH+9jlaNM/yfA6Ox4jE/sLcoy5giML0/3LNkzqHTJVxmGpAqUt4DJL6MfIpbOLBhdDJVKuVO2ERS/k55hekvnhKRqlKICMt62MzoR78poZM8CmbMOs3YgJDqumXaJRaUKtWBbhGmdU6hf2Jd3TRoI6V8rwrR40HZrdtSi2ECc1HRRwO1EIJ61Q924TFfrY8M+fGnmy15jmXBWcja+yOkyQV9K/GdUs9yHvmaW+svSzCpAatvny+ccxR+6bU9H6M7Tab2uuP3tpS+seCeD5+OADCaCQz8sdcTmrtTNQhUcTKgaD1ONkNQE6Fth8OLxPfDsyl5pNv1gXZU5uRCUIgBJXNsA92KltcI3ltsl9BXbkH9Bcum+Uhf/66/24/sr9LzpRyOjkGxk4lwKZUZ19jPx4O03hWDAeCwFCesqDu0P2rX3xbUPwSgPTdjyR9bzkPNret8zD+oNPMWKISPy43atDUgR04/vmsjW0/6EUb/l7vX8vYVta3S2l1c9OsAkGdhg/xxw0N44jGG65wYQ0HttbrzSdHULIOe2lfe9KsLEWXjVcSQIJdT1s9CQ==\"\n" +
                 "  }\n" +
                 "}\n";
         JSONObject jsonParams = new JSONObject(paramsString);
-
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
-            JSONObject value = new JSONObject(String.format("{value: %s}", paramKV.getValue()));
-            jsonParams.append(paramKV.getKey(), value);
+            JSONObject value;
+            Object parsedValue = paramKV.getValue();
+            try {
+                parsedValue = Integer.parseInt(paramKV.getValue());
+            }catch(Exception e){
+                //TODO: find a better way to determine the type
+            }finally{
+                if (swapKeys.containsKey(paramKV.getKey())){
+                    value = new JSONObject();
+                    value.put("value", parsedValue);
+                    jsonParams.put(swapKeys.get(paramKV.getKey()), value);
+                }else if (!extrasAzure.contains(paramKV.getKey())){
+                    value = new JSONObject();
+                    value.put("value", parsedValue);
+                    jsonParams.put(paramKV.getKey(), value);
+                }
+            }
         }
 
         return jsonParams.toString();
@@ -276,12 +337,12 @@ public class MultiCloudServiceResource {
         return runPB(pb);
     }
 
-    @GET
+    @POST
     @Timed
     @Path("/create-multi-cloud")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public String createMultiCloudDeployment(@QueryParam("deploymentName") String deploymentName, HashMap<String,String> params) {
+    public String createMultiCloudDeployment(HashMap<String,String> params, @QueryParam("deploymentName") String deploymentName) {
         validateParams(params);
         CompletableFuture<String> awsFuture
                 = CompletableFuture.supplyAsync(() -> "AWS: \n" + createAwsDeployment(deploymentName, "us-east-2", params));
