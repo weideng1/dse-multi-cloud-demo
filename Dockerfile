@@ -58,10 +58,11 @@ RUN cat config/azure/creds.txt | awk '{system( "az login --service-principal -u 
 #RUN git clone https://github.com/phact/dse-multi-cloud-demo.git
 COPY ./ /dse-multi-cloud-demo/
 
+# TODO: use the precompiled version from the copy ^^
+RUN cd dse-multi-cloud-demo/app && mvn clean package
+
 # lcm script dependencies
 RUN pip install -r dse-multi-cloud-demo/requirements.txt
-
-RUN cd dse-multi-cloud-demo/app && mvn clean package
 
 CMD . config/academy && cd dse-multi-cloud-demo/app && java -jar target/multi-cloud-service.jar server conf/multi-cloud-service-conf.yaml
 #RUN cd /dse-multi-cloud-demo/iaas && ./deploy_aws.sh
