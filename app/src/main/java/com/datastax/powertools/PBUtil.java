@@ -21,6 +21,8 @@ public class PBUtil {
 
     public static String runPB(ProcessBuilder pb){
 
+        logger.info("running command:" + pb.command());
+
         pb.directory(new File("../iaas"));
 
         pb.redirectErrorStream(true);

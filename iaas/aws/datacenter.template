@@ -10,6 +10,10 @@
             "Description": "Org",
             "Type": "String"
         },
+        "DeployerApp": {
+            "Description": "Org",
+            "Type": "String"
+        },
         "KeyName": {
             "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
             "Type": "AWS::EC2::KeyPair::KeyName",
@@ -433,7 +437,7 @@
                 "Tags" : [
                 {
                   "Key" : "deployer-app",
-                  "Value" : "assethub",
+                  "Value" : { "Ref" : "DeployerApp" } ,
                   "PropagateAtLaunch" : true
                 },
                 {

@@ -8,6 +8,11 @@
     "ParameterValue": "presales"
   },
   {
+    "ParameterKey": "DeployerApp",
+    "ParameterValue": "assethub"
+  },
+  {
+  {
     "ParameterKey": "KeyName",
     "ParameterValue": "assethubkey"
   },
