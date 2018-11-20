@@ -4,6 +4,8 @@ import com.datastax.powertools.MultiCloudServiceConfig;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.HashMap;
+
 import static org.testng.Assert.*;
 
 
@@ -18,6 +20,7 @@ public class MultiCloudServiceResourceTest {
 
     MultiCloudServiceConfig config;
     MultiCloudServiceResource msr;
+    HashMap<String, String> params;
 
     @Test
     public void testLcmInstallIps() {
@@ -32,11 +35,12 @@ public class MultiCloudServiceResourceTest {
         "40.78.58.209:10.0.0.5:Azure:1\r"+
         "104.42.156.24:10.0.0.4:Azure:2\r";
 
-        msr.lcmInstallIps(ips);
+        msr.lcmInstallIps(ips, params);
     }
 
     @BeforeMethod
     public void setUp() {
+        params = new HashMap<String, String>();
         config = new MultiCloudServiceConfig();
         msr = new MultiCloudServiceResource(config);
 
@@ -44,6 +48,6 @@ public class MultiCloudServiceResourceTest {
 
     @Test
     public void testLcmInstallDeployment() {
-        msr.lcmInstallDeployment("test1", "us-east-2");
+        msr.lcmInstallDeployment(params, "test1", "us-east-2");
     }
 }

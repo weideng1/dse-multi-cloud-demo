@@ -29,6 +29,11 @@ ap.add_argument("-s", "--server_list", required=True,
 	help="list of servers to be added to the new cluster")
 ap.add_argument("-u", "--user", required=True,
 	help="username for the server")
+ap.add_argument("-v", "--version", required=False,
+	help="username for the server")
+ap.add_argument("-t", "--tokens", required=False,
+	help="username for the server")
+
 args = vars(ap.parse_args())
 
 server_ip = args["LCM_server_ip"]
@@ -36,6 +41,8 @@ ssh_key = args["ssh_key"]
 cluster_name = args["cluster_name"]
 server_list = args["server_list"]
 username = args["user"]
+datastax_version = args["version"]
+vnodes = int(args["tokens"])
 
 repo_user = os.environ.get('academy_user').strip()
 repo_pass = os.environ.get('academy_pass').strip()
