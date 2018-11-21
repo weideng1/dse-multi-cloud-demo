@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -x
+
+currentdir=`dirname $0`
 region='us-west-2'
 stackname='multi'
 usage="---------------------------------------------------
@@ -16,10 +19,15 @@ Options:
                       default us-west-2
  -s stack           : name of AWS CFn stack to deploy,
                       default 'multi'
+ -p parameters      : parameters specified as follows: 
+
+                      ParameterKey=KeyPairName,ParameterValue=MyKey ParameterKey=InstanceType,ParameterValue=t1.micro ...
+
+                      without this flag the script uses params.json
 
 ---------------------------------------------------"
 
-while getopts 'hr:s:' opt; do
+while getopts 'hr:s:p:' opt; do
   case $opt in
     h) echo -e "$usage"
        exit 0
@@ -28,11 +36,17 @@ while getopts 'hr:s:' opt; do
     ;;
     s) stackname="$OPTARG"
     ;;
+    p) params="$OPTARG"
+    ;;
     \?) echo "Invalid option -$OPTARG" >&2
         exit 1
     ;;
   esac
 done
+
+if [ -z "$params" ]; then
+  params="file://${currentdir}/aws/params.json"
+fi
 
 echo "Deploying 'datacenter.template' in stack $stackname in region $region"
 aws cloudformation create-stack  \
@@ -40,8 +54,7 @@ aws cloudformation create-stack  \
 --stack-name $stackname  \
 --disable-rollback  \
 --capabilities CAPABILITY_IAM  \
---template-body file://$(pwd)/aws/datacenter.template  \
---parameters file://$(pwd)/aws/params.json
+--template-body file://${currentdir}/aws/datacenter.template  \
+--parameters ${params}
 echo "Waiting for stack to complete..."
-sleep 30s #avoid fail?
 aws cloudformation wait stack-create-complete --stack-name $stackname

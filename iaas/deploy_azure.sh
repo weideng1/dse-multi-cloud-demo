@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 rg='multi'
 loc="westus"
 usage="---------------------------------------------------
@@ -16,9 +18,15 @@ Options:
                       default westus2
  -g resource-group  : name of resource-group to deploy,
                       default 'multi'
+ -p parameters      : parameters specified as follows: 
+                      \"{\"newStorageAccountName\":
+                      {\"value\": \"acctname\"},\"adminUsername\": {\"value\": \"seb\"},
+                      \"adminPassword\": {\"value\": \"iForgot\"},
+                      \"dnsNameForPublicIP\": {\"value\": \"puppies\"}}\"
+
 ---------------------------------------------------"
 
-while getopts 'hl:g:' opt; do
+while getopts 'hl:g:p:' opt; do
   case $opt in
     h) echo -e "$usage"
        exit 0
@@ -26,6 +34,8 @@ while getopts 'hl:g:' opt; do
     l) loc="$OPTARG"
     ;;
     g) rg="$OPTARG"
+    ;;
+    p) parameters="$OPTARG"
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
         exit 1
@@ -41,9 +51,13 @@ az group deployment create \
 --template-file ./azure/template-vnet.json \
 --verbose
 
+if [ -z "$parameters" ]; then
+  parameters="@./azure/params.json"
+fi
+
 az group deployment create \
 --resource-group $rg \
 --template-file ./azure/nodes.json \
---parameters @./azure/params.json \
+--parameters "${parameters}" \
 --parameters '{"uniqueString": {"value": "'$rand'"}}' \
 --verbose

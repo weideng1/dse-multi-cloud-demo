@@ -63,7 +63,7 @@ while getopts 'hr:g:s:d:' opt; do
     ;;
     d) deploy="$OPTARG"
        #echo Google Compute Engine [deployment: $deploy]
-       gcloud compute instances list --filter="tags.items=($deploy)" | tail -n +2 | awk '{print $5 ":" $4":GCP:"NR-1}'
+       gcloud compute instances list --filter="tags.items=($deploy)" 2> /dev/null | tail -n +2 | awk '{print $5 ":" $4":GCP:"NR-1}'
        #exit 0
     ;;
     \?) echo "Invalid option -$OPTARG" >&2

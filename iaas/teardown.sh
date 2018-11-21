@@ -17,7 +17,6 @@ Options:
  -d deployment-name : name of GCP gcloud deployment to delete
 
 ---------------------------------------------------"
-region='us-west-2' #default region
 
 while getopts 'hr:g:s:d:' opt; do
   case $opt in
@@ -41,7 +40,8 @@ while getopts 'hr:g:s:d:' opt; do
     ;;
     d) deploy="$OPTARG"
       echo "Deleting GCP gcloud deployment: $deploy"
-      gcloud deployment-manager deployments delete $deploy -q
+      # TODO: this is a hack does the warn come in stderr?
+      gcloud deployment-manager deployments delete $deploy -q | grep -v WARNING
     ;;
     \?) echo "Invalid option -$OPTARG" >&2
         exit 1

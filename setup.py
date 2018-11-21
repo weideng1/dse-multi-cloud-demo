@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#e!/usr/bin/env python
 # Example provisioning API usage script.  (C) DataStax, 2015.  All Rights Reserved
 #
 # Needs these OS environmental variables pre-defined: lcm_server, cassandra_default_password, opscenter_session (optional), dse_ver (optional), cluster_name (optional)
@@ -14,6 +14,9 @@ import argparse
 import subprocess
 import webbrowser
 
+datastax_version = "6.0.2"
+vnodes = 8
+
 # Configurable args
 ap = argparse.ArgumentParser()
 ap.add_argument("-lcm", "--LCM_server_ip", required=True,
@@ -26,6 +29,11 @@ ap.add_argument("-s", "--server_list", required=True,
 	help="list of servers to be added to the new cluster")
 ap.add_argument("-u", "--user", required=True,
 	help="username for the server")
+ap.add_argument("-v", "--version", required=False,
+	help="username for the server")
+ap.add_argument("-t", "--tokens", required=False,
+	help="username for the server")
+
 args = vars(ap.parse_args())
 
 server_ip = args["LCM_server_ip"]
@@ -33,13 +41,15 @@ ssh_key = args["ssh_key"]
 cluster_name = args["cluster_name"]
 server_list = args["server_list"]
 username = args["user"]
+datastax_version = args["version"]
+vnodes = int(args["tokens"])
 
 repo_user = os.environ.get('academy_user').strip()
 repo_pass = os.environ.get('academy_pass').strip()
 download_token = os.environ.get('academy_token').strip()
 
 #SSH into the OpsCenter/LCM server, install the JDK, install OpsCenter
-bashCommand = 'ssh -o StrictHostKeyChecking=accept-new -i '+ ssh_key+ ' '+ username+'@'+server_ip+' \'sudo apt-get install -y python software-properties-common; \
+bashCommand = 'ssh -o StrictHostKeyChecking=no -i '+ ssh_key+ ' '+ username+'@'+server_ip+' \'sudo apt-get install -y python software-properties-common; \
 sudo apt-add-repository -y ppa:webupd8team/java; \
 sudo apt-get update; \
 echo "oracle-java8-installer shared/accepted-oracle-license-v1-1 select true" | sudo debconf-set-selections; \
@@ -47,8 +57,7 @@ sudo apt-get install -y oracle-java8-installer; \
 echo "deb https://'+repo_user+':'+download_token+'@debian.datastax.com/enterprise \
 stable main" | sudo tee -a /etc/apt/sources.list.d/datastax.sources.list; \
 curl -L https://debian.datastax.com/debian/repo_key | sudo apt-key add - ; \
-sudo apt-get update; sudo apt-get install opscenter; sudo service opscenterd start;\
-\' 2>/dev/null'
+sudo apt-get update; sudo apt-get install opscenter; sudo service opscenterd start\' 2>/dev/null'
 
 output = subprocess.check_output(['bash','-c', bashCommand])
 
@@ -116,9 +125,9 @@ machine_credential_id = machine_credential_response['id']
 
 cluster_profile_response = do_post("config_profiles/",
     {"name": cluster_name,
-     "datastax-version": "6.0.2",
+     "datastax-version": datastax_version,
 	 'json': {'cassandra-yaml' : {
-	 			  'num_tokens' : 256,
+	 			  'num_tokens' : vnodes,
                   'client_encryption_options' : { 'enabled' : True },
                   'server_encryption_options' : { 'internode_encryption' : 'all',
 							                      'require_client_auth' : True,
@@ -129,6 +138,24 @@ cluster_profile_response = do_post("config_profiles/",
      "comment": 'LCM provisioned %s' % cluster_name})
 cluster_profile_id = cluster_profile_response['id']
 
+cluster_profile_response_no_java = do_post("config_profiles/",
+    {"name": cluster_name+"-no-java",
+     "datastax-version": datastax_version,
+     'json': {'cassandra-yaml' : {
+         'num_tokens' : vnodes,
+         'client_encryption_options' : { 'enabled' : True },
+         'server_encryption_options' : { 'internode_encryption' : 'all',
+             'require_client_auth' : True,
+             'require_endpoint_verification' : False
+             }
+         },
+         "java-setup": {"manage-java": False}
+         },
+     "comment": 'LCM provisioned %s' % cluster_name})
+
+cluster_profile_id_no_java = cluster_profile_response_no_java['id']
+
+
 make_cluster_response = do_post("clusters/",
     {"name": cluster_name,
      "repository-id": repository_id,
@@ -136,12 +163,13 @@ make_cluster_response = do_post("clusters/",
      "old-password": "cassandra",
      "new-password": cassandra_default_password,
      "config-profile-id": cluster_profile_id})
+
 cluster_id = make_cluster_response['id']
 
 data_centers = set()
 
-with open(server_list, 'r') as server_list_file:
-    server_list = server_list_file.read().split()
+print(server_list)
+server_list = server_list.split(";")
 
 for host in server_list:
     data_centers.add(host.split(":")[2])
@@ -162,15 +190,27 @@ for host in server_list:
     private_ip = host.split(":")[1]
     data_center = host.split(":")[2]
     node_idx = host.split(":")[3]
-    make_node_response = do_post("nodes/",
-        {"name": "node" + str(node_idx) + "_" + node_ip,
-         "listen-address": private_ip,
-         "native-transport-address": "0.0.0.0",
-	     "broadcast-address": node_ip,
-         "native-transport-broadcast-address": node_ip,
-         "ssh-management-address": node_ip,
-         "datacenter-id": data_center_ids[data_center],
-         "rack": "rack1"})
+    if (node_ip == server_ip):
+        make_node_response = do_post("nodes/",
+            {"name": "node" + str(node_idx) + "_" + node_ip,
+             "config-profile-id": cluster_profile_id_no_java, 
+             "listen-address": private_ip,
+             "native-transport-address": "0.0.0.0",
+                 "broadcast-address": node_ip,
+             "native-transport-broadcast-address": node_ip,
+             "ssh-management-address": node_ip,
+             "datacenter-id": data_center_ids[data_center],
+             "rack": "rack1"})
+    else:
+        make_node_response = do_post("nodes/",
+            {"name": "node" + str(node_idx) + "_" + node_ip,
+             "listen-address": private_ip,
+             "native-transport-address": "0.0.0.0",
+                 "broadcast-address": node_ip,
+             "native-transport-broadcast-address": node_ip,
+             "ssh-management-address": node_ip,
+             "datacenter-id": data_center_ids[data_center],
+             "rack": "rack1"})
 
 # Request an install job to execute the installation and configuration of the
 # cluster. Until this point, we've been describing future state. Now LCM will

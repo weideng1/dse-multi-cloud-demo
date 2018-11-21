@@ -1,18 +1,31 @@
 [
   {
+    "ParameterKey": "CreateUser",
+    "ParameterValue": "sebastian.estevez@datastax.com"
+  },
+  {
+    "ParameterKey": "Org",
+    "ParameterValue": "presales"
+  },
+  {
+    "ParameterKey": "DeployerApp",
+    "ParameterValue": "assethub"
+  },
+  {
+  {
     "ParameterKey": "KeyName",
-    "ParameterValue": "jbreese-multicloud-ubuntu"
+    "ParameterValue": "assethubkey"
   },
   {
     "ParameterKey": "VPC",
-    "ParameterValue": "vpc-70141d15"
+    "ParameterValue": "vpc-75c83d1c"
   },
   {
     "ParameterKey": "AvailabilityZones",
-    "ParameterValue": "us-west-2a,us-west-2b,us-west-2c"
+    "ParameterValue": "us-east-2a,us-east-2b,us-east-2c"
   },
   {
     "ParameterKey": "Subnets",
-    "ParameterValue": "subnet-b5f6ead0,subnet-cbefa192,subnet-0982b37e"
+    "ParameterValue": "subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4"
   }
 ]

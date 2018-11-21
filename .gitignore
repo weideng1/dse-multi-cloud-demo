@@ -1,0 +1,11 @@
+nohup.out
+*/target
+*/.idea
+*.iml
+.credentials
+credentials
+gcloud-service-key.json
+creds.txt
+ip-list
+assethubkey
+academy

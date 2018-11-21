@@ -1,7 +1,19 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Datastax template, License: Apache 2.0 (Please do not remove) May,30,2017 (qs-1nbqhl4uk)",
+    "Description": "Datastax template",
     "Parameters": {
+        "CreateUser": {
+            "Description": "Create User email",
+            "Type": "String"
+        },
+        "Org": {
+            "Description": "Org",
+            "Type": "String"
+        },
+        "DeployerApp": {
+            "Description": "Org",
+            "Type": "String"
+        },
         "KeyName": {
             "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
             "Type": "AWS::EC2::KeyPair::KeyName",
@@ -422,6 +434,23 @@
                 "MaxSize": {
                     "Ref": "DataCenterSize"
                 },
+                "Tags" : [
+                {
+                  "Key" : "deployer-app",
+                  "Value" : { "Ref" : "DeployerApp" } ,
+                  "PropagateAtLaunch" : true
+                },
+                {
+                  "Key" : "create_user",
+                  "Value" : { "Ref" : "CreateUser" } ,
+                  "PropagateAtLaunch" : true
+                },
+                {
+                  "Key" : "org",
+                  "Value" : { "Ref" : "Org" } ,
+                  "PropagateAtLaunch" : true
+                }
+                ],
                 "VPCZoneIdentifier": {
                     "Ref": "Subnets"
                 }
@@ -637,6 +666,14 @@
                         "IpProtocol": "tcp",
                         "FromPort": "1",
                         "ToPort": "65535",
+                        "CidrIp": {
+                            "Ref": "SecurityCIDR"
+                        }
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": "8",
+                        "ToPort": "-1",
                         "CidrIp": {
                             "Ref": "SecurityCIDR"
                         }
