@@ -411,7 +411,7 @@ public class MultiCloudServiceResource {
     @POST
     @Timed
     @Path("/lcm-install-deployment")
-    @Produces(MediaType.TEXT_PLAIN)
+    @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response lcmInstallDeployment(HashMap<String, String> params, @QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
         if (region == null)
