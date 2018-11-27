@@ -58,6 +58,8 @@ RUN cat config/azure/creds.txt | awk '{system( "az login --service-principal -u 
 #RUN git clone https://github.com/phact/dse-multi-cloud-demo.git
 COPY ./ /dse-multi-cloud-demo/
 
+RUN chmod 600 /dse-multi-cloud-demo/config/assethubkey
+
 # TODO: use the precompiled version from the copy ^^
 RUN cd dse-multi-cloud-demo/app && mvn clean package
 
