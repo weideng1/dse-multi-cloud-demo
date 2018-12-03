@@ -130,7 +130,7 @@ cluster_profile_response = do_post("config_profiles/",
 	 			  'num_tokens' : vnodes,
                   'client_encryption_options' : { 'enabled' : True },
                   'server_encryption_options' : { 'internode_encryption' : 'all',
-							                      'require_client_auth' : True,
+							                      'require_client_auth' : False,
 							                      'require_endpoint_verification' : False
                   								}
 				 				},
@@ -145,7 +145,7 @@ cluster_profile_response_no_java = do_post("config_profiles/",
          'num_tokens' : vnodes,
          'client_encryption_options' : { 'enabled' : True },
          'server_encryption_options' : { 'internode_encryption' : 'all',
-             'require_client_auth' : True,
+             'require_client_auth' : False,
              'require_endpoint_verification' : False
              }
          },
