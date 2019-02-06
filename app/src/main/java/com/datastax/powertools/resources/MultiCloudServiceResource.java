@@ -6,20 +6,22 @@ import com.datastax.powertools.MultiCloudServiceConfig;
 import com.datastax.powertools.StreamUtil;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.bouncycastle.openssl.PEMKeyPair;
+import org.bouncycastle.openssl.PEMParser;
 import org.glassfish.jersey.server.ChunkedOutput;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.security.*;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.function.BinaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -107,7 +109,7 @@ public class MultiCloudServiceResource {
     */
 
     private List<String> paramsToAWSString(HashMap<String, String> params) {
-        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
+        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("ssh_key","auth", "node_to_node", "password", "deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
         Map<String, String> swapKeys = Map.of(
                 "org", "Org",
                 "deployerapp", "DeployerApp",
@@ -140,7 +142,7 @@ public class MultiCloudServiceResource {
         return paramString;
     }
 
-    private void validateParams(HashMap<String, String> params) {
+    private HashMap<String, String> validateParams(HashMap<String, String> params) {
         //TODO: make this an option
         if (params.get("ssh_key") != null){
             params.remove("ssh_key");
@@ -152,6 +154,7 @@ public class MultiCloudServiceResource {
         if(params.get("createuser") == null){
             params.put("createuser", "none");
         }
+        return params;
     }
 
     @GET
@@ -194,16 +197,21 @@ public class MultiCloudServiceResource {
     private Map<String, String> paramsToGCPString(HashMap<String, String> params) {
         Map<String, String> paramsAndLabels = new HashMap<>();
         //String paramsString = "\"zones:'us-east1-b'," +
+        String privateKey = params.get("ssh_key");
+        String publicKey = getPublicKey(privateKey);
         String paramsString = "zones:'us-east1-b'," +
                 "network:'default'," +
                 "machineType:'n1-standard-2'," +
                 "dataDiskType:'pd-ssd'," +
                 "diskSize:60," +
-                "sshKeyValue:'AAAAB3NzaC1yc2EAAAADAQABAAACAQCzmNOzPiUcl45ZOJSh/5kUU7dmm3xUp+j++l9zLxLov/De9RukvHWPTRNtAHdWR0EatTSqsmlvDUm8UkKVuPdQ223MiZYlL53Q3ZXzGnAzShtbL8VIMvH+9jlaNM/yfA6Ox4jE/sLcoy5giML0/3LNkzqHTJVxmGpAqUt4DJL6MfIpbOLBhdDJVKuVO2ERS/k55hekvnhKRqlKICMt62MzoR78poZM8CmbMOs3YgJDqumXaJRaUKtWBbhGmdU6hf2Jd3TRoI6V8rwrR40HZrdtSi2ECc1HRRwO1EIJ61Q924TFfrY8M+fGnmy15jmXBWcja+yOkyQV9K/GdUs9yHvmaW+svSzCpAatvny+ccxR+6bU9H6M7Tab2uuP3tpS+seCeD5+OADCaCQz8sdcTmrtTNQhUcTKgaD1ONkNQE6Fth8OLxPfDsyl5pNv1gXZU5uRCUIgBJXNsA92KltcI3ltsl9BXbkH9Bcum+Uhf/66/24/sr9LzpRyOjkGxk4lwKZUZ19jPx4O03hWDAeCwFCesqDu0P2rX3xbUPwSgPTdjyR9bzkPNret8zD+oNPMWKISPy43atDUgR04/vmsjW0/6EUb/l7vX8vYVta3S2l1c9OsAkGdhg/xxw0N44jGG65wYQ0HttbrzSdHULIOe2lfe9KsLEWXjVcSQIJdT1s9CQ==',";
+                "sshKeyValue:'" + publicKey + "',";
         String labels = "";
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
+            if (paramKV.getKey().equals("ssh_key")){
+                continue;
+            }
             if (paramKV.getKey().equals("deployerapp") || paramKV.getKey().equals("createuser") || paramKV.getKey().equals("org")){
-                labels += String.format("%s=%s,", paramKV.getKey(), paramKV.getValue());
+                labels += String.format("%s=%s,", paramKV.getKey(), paramKV.getValue().toLowerCase());
             }
             else if (paramKV.getKey().equals("nodes_gcp")){
                 paramsString+= String.format("%s:%s,", "nodesPerZone", paramKV.getValue());
@@ -307,12 +315,14 @@ public class MultiCloudServiceResource {
         // \"adminPassword\": {\"value\": \"122130869@qq\"},
         // \"dnsNameForPublicIP\": {\"value\": \"jasontest321\"}}"
         // --template-uri https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/docker-simple-on-ubuntu/azuredeploy.json
-        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type", "num_clusters", "deploymentName"));
+        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("ssh_key","password","auth","node_to_node","startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type", "num_clusters", "deploymentName"));
         Map<String, String> swapKeys = Map.of(
                 "createuser", "createUser",
                 "nodes_azure", "nodeCount"
         );
 
+        String privateKey = params.get("ssh_key");
+        String publicKey = getPublicKey(privateKey);
         String paramsString = "{\n" +
                 "  \"location\": {\n" +
                 "    \"value\": \"westus\"\n" +
@@ -336,12 +346,13 @@ public class MultiCloudServiceResource {
                 "    \"value\": \"subnet\"\n" +
                 "  },\n" +
                 "  \"sshKeyData\": {\n" +
-                "    \"value\": \"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCzmNOzPiUcl45ZOJSh/5kUU7dmm3xUp+j++l9zLxLov/De9RukvHWPTRNtAHdWR0EatTSqsmlvDUm8UkKVuPdQ223MiZYlL53Q3ZXzGnAzShtbL8VIMvH+9jlaNM/yfA6Ox4jE/sLcoy5giML0/3LNkzqHTJVxmGpAqUt4DJL6MfIpbOLBhdDJVKuVO2ERS/k55hekvnhKRqlKICMt62MzoR78poZM8CmbMOs3YgJDqumXaJRaUKtWBbhGmdU6hf2Jd3TRoI6V8rwrR40HZrdtSi2ECc1HRRwO1EIJ61Q924TFfrY8M+fGnmy15jmXBWcja+yOkyQV9K/GdUs9yHvmaW+svSzCpAatvny+ccxR+6bU9H6M7Tab2uuP3tpS+seCeD5+OADCaCQz8sdcTmrtTNQhUcTKgaD1ONkNQE6Fth8OLxPfDsyl5pNv1gXZU5uRCUIgBJXNsA92KltcI3ltsl9BXbkH9Bcum+Uhf/66/24/sr9LzpRyOjkGxk4lwKZUZ19jPx4O03hWDAeCwFCesqDu0P2rX3xbUPwSgPTdjyR9bzkPNret8zD+oNPMWKISPy43atDUgR04/vmsjW0/6EUb/l7vX8vYVta3S2l1c9OsAkGdhg/xxw0N44jGG65wYQ0HttbrzSdHULIOe2lfe9KsLEWXjVcSQIJdT1s9CQ==\"\n" +
+                "    \"value\": \"ssh-rsa " + publicKey + "\"\n" +
                 "  },\n" +
                 "  \"uniqueString\": {\n" +
                 "    \"value\": \""+ params.get("deploymentName")+"\"\n" +
                 "  }\n" +
                 "}\n";
+        System.out.println(paramsString);
         JSONObject jsonParams = new JSONObject(paramsString);
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
             JSONObject value;
@@ -364,6 +375,44 @@ public class MultiCloudServiceResource {
         }
 
         return jsonParams.toString();
+    }
+
+    private String getPublicKey(String privateKeyString) {
+        try {
+
+            Reader reader = new StringReader(privateKeyString);
+            PEMParser parser = new PEMParser(reader);
+            PEMKeyPair bcKeyPair = (PEMKeyPair) parser.readObject();
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(bcKeyPair.getPrivateKeyInfo().getEncoded());
+
+            KeyFactory kf = KeyFactory.getInstance("RSA");
+            PrivateKey myPrivateKey = kf.generatePrivate(keySpec);
+
+            RSAPrivateCrtKey privk = (RSAPrivateCrtKey)myPrivateKey;
+
+            RSAPublicKeySpec publicKeySpec = new java.security.spec.RSAPublicKeySpec(privk.getModulus(), privk.getPublicExponent());
+
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+
+            String publicKeyEncoded;
+            RSAPublicKey rsaPublicKey = (RSAPublicKey) publicKey;
+            ByteArrayOutputStream byteOs = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(byteOs);
+            dos.writeInt("ssh-rsa".getBytes().length);
+            dos.write("ssh-rsa".getBytes());
+            dos.writeInt(rsaPublicKey.getPublicExponent().toByteArray().length);
+            dos.write(rsaPublicKey.getPublicExponent().toByteArray());
+            dos.writeInt(rsaPublicKey.getModulus().toByteArray().length);
+            dos.write(rsaPublicKey.getModulus().toByteArray());
+            publicKeyEncoded = new String(
+                    Base64.getEncoder().encode(byteOs.toByteArray()));
+            return publicKeyEncoded;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     @GET
@@ -484,7 +533,8 @@ public class MultiCloudServiceResource {
             throw new RuntimeException("deploymentName is a required parameter");
         }
         String deploymentName = params.get("deploymentName");
-        validateParams(params);
+
+        //validateParams(params);
 
         ChunkedOutput<String> out = new ChunkedOutput<>(String.class, "\n");
 
@@ -530,8 +580,6 @@ public class MultiCloudServiceResource {
     @Path("/terminate-multi-cloud")
     @Produces(MediaType.APPLICATION_JSON)
     public Response terminateMultiCloudDeployment(@QueryParam("deploymentName") String deploymentName) {
-
-
         ChunkedOutput<String> out = new ChunkedOutput<>(String.class, "\n");
         StreamUtil streamU = new StreamUtil(out);
 
