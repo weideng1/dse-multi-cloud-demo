@@ -127,7 +127,9 @@ cluster_profile_response = do_post("config_profiles/",
     {"name": cluster_name,
      "datastax-version": datastax_version,
 	 'json': {'cassandra-yaml' : {
-	 			  'num_tokens' : vnodes
+	 			  'num_tokens' : vnodes,
+                                  'authenticator' : 'AllowAllAuthenticator',
+                                  'authorizer' : 'AllowAllAuthorizer'
 #,
 #                  'client_encryption_options' : { 'enabled' : True },
 #                  'server_encryption_options' : { 'internode_encryption' : 'all',
@@ -143,7 +145,9 @@ cluster_profile_response_no_java = do_post("config_profiles/",
     {"name": cluster_name+"-no-java",
      "datastax-version": datastax_version,
      'json': {'cassandra-yaml' : {
-         'num_tokens' : vnodes
+         'num_tokens' : vnodes,
+         'authenticator' : 'AllowAllAuthenticator',
+         'authorizer' : 'AllowAllAuthorizer'
 #,
 #         'client_encryption_options' : { 'enabled' : True },
 #         'server_encryption_options' : { 'internode_encryption' : 'all',
