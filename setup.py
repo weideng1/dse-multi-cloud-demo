@@ -127,12 +127,13 @@ cluster_profile_response = do_post("config_profiles/",
     {"name": cluster_name,
      "datastax-version": datastax_version,
 	 'json': {'cassandra-yaml' : {
-	 			  'num_tokens' : vnodes,
-                  'client_encryption_options' : { 'enabled' : True },
-                  'server_encryption_options' : { 'internode_encryption' : 'all',
-							                      'require_client_auth' : False,
-							                      'require_endpoint_verification' : False
-                  								}
+	 			  'num_tokens' : vnodes
+#,
+#                  'client_encryption_options' : { 'enabled' : True },
+#                  'server_encryption_options' : { 'internode_encryption' : 'all',
+#							                      'require_client_auth' : False,
+#							                      'require_endpoint_verification' : False
+#                  								}
 				 				},
              },
      "comment": 'LCM provisioned %s' % cluster_name})
@@ -142,12 +143,13 @@ cluster_profile_response_no_java = do_post("config_profiles/",
     {"name": cluster_name+"-no-java",
      "datastax-version": datastax_version,
      'json': {'cassandra-yaml' : {
-         'num_tokens' : vnodes,
-         'client_encryption_options' : { 'enabled' : True },
-         'server_encryption_options' : { 'internode_encryption' : 'all',
-             'require_client_auth' : False,
-             'require_endpoint_verification' : False
-             }
+         'num_tokens' : vnodes
+#,
+#         'client_encryption_options' : { 'enabled' : True },
+#         'server_encryption_options' : { 'internode_encryption' : 'all',
+#             'require_client_auth' : False,
+#             'require_endpoint_verification' : False
+#             }
          },
          "java-setup": {"manage-java": False}
          },
