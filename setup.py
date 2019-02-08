@@ -222,7 +222,7 @@ install_job = do_post("actions/install",
                       "job-scope":"cluster",
                       "resource-id":cluster_id,
                       "concurrency-strategy": "cluster-at-a-time",
-                      "continue-on-error":"true"})
+                      "continue-on-error":"false"})
 
 print("http://%s:8888" % server_ip)
 #open up a new browser tab that shows LCM working
