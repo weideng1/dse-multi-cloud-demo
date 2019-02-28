@@ -15,6 +15,8 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 
 public class PBUtil {
 
@@ -87,6 +89,9 @@ public static Map<String, Object> runPbAsInputStream(ProcessBuilder pb){
 
         try {
             Process p = pb.start();
+
+            //TODO: figure out how to get the exit status async
+            //CompletableFuture<Process> future = p.onExit();
 
             int shellExitStatus = p.waitFor();
             System.out.println("Exit status" + shellExitStatus);

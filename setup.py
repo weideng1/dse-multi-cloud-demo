@@ -129,7 +129,10 @@ cluster_profile_response = do_post("config_profiles/",
 	 'json': {'cassandra-yaml' : {
 	 			  'num_tokens' : vnodes,
                                   'authenticator' : 'AllowAllAuthenticator',
-                                  'authorizer' : 'AllowAllAuthorizer'
+                                  'authorizer' : 'AllowAllAuthorizer',
+                                  "10-write-prom-conf" : {
+                                      "enabled" : True
+                                  }
 #,
 #                  'client_encryption_options' : { 'enabled' : True },
 #                  'server_encryption_options' : { 'internode_encryption' : 'all',
