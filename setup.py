@@ -228,7 +228,7 @@ install_job = do_post("actions/install",
                      {"job-type":"install",
                       "job-scope":"cluster",
                       "resource-id":cluster_id,
-                      "concurrency-strategy": "cluster-at-a-time",
+#                      "concurrency-strategy": "cluster-at-a-time",
                       "continue-on-error":"false"})
 
 print("http://%s:8888" % server_ip)
