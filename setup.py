@@ -130,9 +130,9 @@ cluster_profile_response = do_post("config_profiles/",
 	 			  'num_tokens' : vnodes,
                                   'authenticator' : 'AllowAllAuthenticator',
                                   'authorizer' : 'AllowAllAuthorizer',
-                                  "10-write-prom-conf" : {
-                                      "enabled" : True
-                                  }
+#                                  "10-write-prom-conf" : {
+#                                      "enabled" : True
+#                                  }
 #,
 #                  'client_encryption_options' : { 'enabled' : True },
 #                  'server_encryption_options' : { 'internode_encryption' : 'all',
