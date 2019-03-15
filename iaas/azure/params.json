@@ -6,7 +6,7 @@
     "value": 3
   },
   "vmSize": {
-    "value": "Standard_DS4_v2"
+    "value": "Standard_D4_v2"
   },
   "namespace": {
     "value": "dc0"
