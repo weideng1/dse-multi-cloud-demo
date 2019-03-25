@@ -121,7 +121,7 @@ public class MultiCloudServiceResource {
                 "ParameterKey=KeyName,ParameterValue=assethubkey",
                 "ParameterKey=VPC,ParameterValue=vpc-75c83d1c",
                 "ParameterKey=AvailabilityZones,ParameterValue='us-east-2a,us-east-2b,us-east-2c'",
-                "ParameterKey=VolumeSize,ParameterValue=300",
+                "ParameterKey=VolumeSize,ParameterValue=512",
                 "ParameterKey=Subnets,ParameterValue='subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4'"));
 
         // You can name loops in java in order to continue / break from the right loop when loops are nested
@@ -205,7 +205,7 @@ public class MultiCloudServiceResource {
                 "network:'default'," +
                 "machineType:'n1-standard-2'," +
                 "dataDiskType:'pd-ssd'," +
-                "diskSize:300," +
+                "diskSize:512," +
                 "sshKeyValue:'" + publicKey + "',";
         String labels = "";
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
@@ -330,10 +330,10 @@ public class MultiCloudServiceResource {
                 "    \"value\": \"westus\"\n" +
                 "  },\n" +
                 "  \"diskSize\": {\n" +
-                "    \"value\": 256\n" +
+                "    \"value\": 512\n" +
                 "  },\n" +
                 "  \"vmSize\": {\n" +
-                "    \"value\": \"Standard_D4_v2\"\n" +
+                "    \"value\": \"Standard_DS4_v2\"\n" +
                 "  },\n" +
                 "  \"namespace\": {\n" +
                 "    \"value\": \"dc0\"\n" +
