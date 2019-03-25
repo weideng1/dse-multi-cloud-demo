@@ -271,7 +271,7 @@
           "osDisk": {
             "createOption": "FromImage"
           },
-          "dataDisks": "[if( greater(parameters('diskSize'), 0 ) , json(concat('[{\"diskSizeGB\": \"', parameters('diskSize'), '\", \"lun\": 0, \"createOption\": \"Empty\"}]')), json('[]') )]"
+          "dataDisks": "[if( greater(parameters('diskSize'), 0 ) , json(concat('[{\"diskSizeGB\": \"', parameters('diskSize'), '\", \"lun\": 0, \"managedDisk\": { \"storageAccountType\": \"Premium_LRS\"} \"createOption\": \"Empty\"}]')), json('[]') )]"
         },
         "networkProfile": {
           "networkInterfaces": [
