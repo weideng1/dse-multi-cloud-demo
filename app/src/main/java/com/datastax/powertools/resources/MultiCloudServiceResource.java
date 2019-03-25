@@ -189,7 +189,8 @@ public class MultiCloudServiceResource {
                 deploymentName,
                 "--template", "/dse-multi-cloud-demo/iaas/gcp/datastax.py",
                 "--properties", paramsAndLabelsMap.get("params"),
-                "--labels", paramsAndLabelsMap.get("labels"));
+                "--labels", paramsAndLabelsMap.get("labels")
+        );
 
         return runPbAsInputStream(pb);
     }
@@ -203,7 +204,7 @@ public class MultiCloudServiceResource {
                 "network:'default'," +
                 "machineType:'n1-standard-2'," +
                 "dataDiskType:'pd-ssd'," +
-                "diskSize:60," +
+                "diskSize:300," +
                 "sshKeyValue:'" + publicKey + "',";
         String labels = "";
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
@@ -327,8 +328,11 @@ public class MultiCloudServiceResource {
                 "  \"location\": {\n" +
                 "    \"value\": \"westus\"\n" +
                 "  },\n" +
+                "  \"diskSize\": {\n" +
+                "    \"value\": 256\n" +
+                "  },\n" +
                 "  \"vmSize\": {\n" +
-                "    \"value\": \"Standard_DS4_v2\"\n" +
+                "    \"value\": \"Standard_D4_v2\"\n" +
                 "  },\n" +
                 "  \"namespace\": {\n" +
                 "    \"value\": \"dc0\"\n" +

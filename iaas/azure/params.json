@@ -5,6 +5,9 @@
   "nodeCount": {
     "value": 3
   },
+  "diskSize": {
+    "value": 300
+  },
   "vmSize": {
     "value": "Standard_D4_v2"
   },
