@@ -27,5 +27,9 @@
   {
     "ParameterKey": "Subnets",
     "ParameterValue": "subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4"
+  },
+  {
+    "ParameterKey": "VolumeSize",
+    "ParameterValue": "300"
   }
 ]

@@ -47,7 +47,7 @@
         "VolumeSize": {
             "Type": "Number",
             "Description": "EBS volume size in GB",
-            "Default": "1024"
+            "Default": "60"
         },
         "SecurityCIDR": {
             "Description": "The IP address range covering node instances",

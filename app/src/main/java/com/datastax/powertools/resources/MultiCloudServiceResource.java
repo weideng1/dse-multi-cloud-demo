@@ -121,6 +121,7 @@ public class MultiCloudServiceResource {
                 "ParameterKey=KeyName,ParameterValue=assethubkey",
                 "ParameterKey=VPC,ParameterValue=vpc-75c83d1c",
                 "ParameterKey=AvailabilityZones,ParameterValue='us-east-2a,us-east-2b,us-east-2c'",
+                "ParameterKey=VolumeSize,ParameterValue=300",
                 "ParameterKey=Subnets,ParameterValue='subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4'"));
 
         // You can name loops in java in order to continue / break from the right loop when loops are nested
