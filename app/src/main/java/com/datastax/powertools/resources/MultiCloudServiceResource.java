@@ -118,7 +118,7 @@ public class MultiCloudServiceResource {
                 );
 
         List<String> paramString = new ArrayList<>(Arrays.asList(
-                "ParameterKey=KeyName,ParameterValue=assethubkey",
+                "ParameterKey=KeyName,ParameterValue=assethub-2019",
                 "ParameterKey=VPC,ParameterValue=vpc-75c83d1c",
                 "ParameterKey=AvailabilityZones,ParameterValue='us-east-2a,us-east-2b,us-east-2c'",
                 "ParameterKey=VolumeSize,ParameterValue=512",
@@ -519,7 +519,7 @@ public class MultiCloudServiceResource {
                 "-lcm", lcmIp,
                 "-u", "ubuntu",
                 // TODO: this needs to be dynamic at some point
-                "-k", "/dse-multi-cloud-demo/config/assethubkey",
+                "-k", "/dse-multi-cloud-demo/config/assethub-2019",
                 "-n", clusterName,
                 "-v", dse_version,
                 "-t", num_tokens,
