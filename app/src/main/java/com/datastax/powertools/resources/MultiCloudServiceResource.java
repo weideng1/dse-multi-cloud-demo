@@ -109,7 +109,7 @@ public class MultiCloudServiceResource {
     */
 
     private List<String> paramsToAWSString(HashMap<String, String> params) {
-        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("ssh_key","auth", "node_to_node", "password", "deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
+        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","auth", "node_to_node", "password", "deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
         Map<String, String> swapKeys = Map.of(
                 "org", "Org",
                 "deployerapp", "DeployerApp",
@@ -317,7 +317,7 @@ public class MultiCloudServiceResource {
         // \"adminPassword\": {\"value\": \"122130869@qq\"},
         // \"dnsNameForPublicIP\": {\"value\": \"jasontest321\"}}"
         // --template-uri https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/docker-simple-on-ubuntu/azuredeploy.json
-        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("ssh_key","password","auth","node_to_node","startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type", "num_clusters", "deploymentName"));
+        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","password","auth","node_to_node","startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type", "num_clusters", "deploymentName"));
         Map<String, String> swapKeys = Map.of(
                 "createuser", "createUser",
                 "nodes_azure", "nodeCount"

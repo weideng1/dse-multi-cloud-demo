@@ -15,7 +15,7 @@ import subprocess
 import webbrowser
 
 datastax_version = "6.0.2"
-vnodes = 8
+vnodes = 1
 
 # Configurable args
 ap = argparse.ArgumentParser()
@@ -122,29 +122,43 @@ machine_credential_response = do_post("machine_credentials/",
 )
 machine_credential_id = machine_credential_response['id']
 
-cluster_profile_response = do_post("config_profiles/",
-    {"name": cluster_name,
-     "datastax-version": datastax_version,
-	 'json': {'cassandra-yaml' : {
-	 			  'num_tokens' : vnodes,
-                                  'authenticator' : 'AllowAllAuthenticator',
-                                  'authorizer' : 'AllowAllAuthorizer',
-#                                  "10-write-prom-conf" : {
-#                                      "enabled" : True
-#                                  }
-#,
-#                  'client_encryption_options' : { 'enabled' : True },
-#                  'server_encryption_options' : { 'internode_encryption' : 'all',
-#							                      'require_client_auth' : False,
-#							                      'require_endpoint_verification' : False
-#                  								}
-				 				},
-             },
-     "comment": 'LCM provisioned %s' % cluster_name})
+configProfile = {
+    "name": cluster_name,
+    "datastax-version": datastax_version,
+    'json': {
+        'cassandra-yaml' : {
+            'num_tokens' : vnodes,
+            'authenticator' : 'AllowAllAuthenticator',
+            'authorizer' : 'AllowAllAuthorizer',
+#           "10-write-prom-conf" : {
+#               "enabled" : True
+#           }
+#           ,
+#           'client_encryption_options' : { 'enabled' : True },
+#           'server_encryption_options' : { 'internode_encryption' : 'all',
+#               'require_client_auth' : False,
+#		'require_endpoint_verification' : False
+#           }
+        },
+#CLOSE cassandra.yaml
+    },
+    "comment": 'LCM provisioned %s' % cluster_name
+}
+
+
+jvmOptions ={
+   "additional-jvm-opts" : [
+       "-Ddse.io.aio.enabled=false -Dcassandra.consistent.rangemovement=false"
+   ]
+}
+
+if (vnodes == 1):
+  configProfile['json']['jvm-options'] = jvmOptions
+
+cluster_profile_response = do_post("config_profiles/", configProfile)
 cluster_profile_id = cluster_profile_response['id']
 
-cluster_profile_response_no_java = do_post("config_profiles/",
-    {"name": cluster_name+"-no-java",
+configProfileNoJava = {"name": cluster_name+"-no-java",
      "datastax-version": datastax_version,
      'json': {'cassandra-yaml' : {
          'num_tokens' : vnodes,
@@ -159,10 +173,13 @@ cluster_profile_response_no_java = do_post("config_profiles/",
          },
          "java-setup": {"manage-java": False}
          },
-     "comment": 'LCM provisioned %s' % cluster_name})
+     "comment": 'LCM provisioned %s' % cluster_name}
 
+if (vnodes == 1) :
+  configProfileNoJava['json']['jvm-options'] = jvmOptions
+
+cluster_profile_response_no_java = do_post("config_profiles/", configProfileNoJava)
 cluster_profile_id_no_java = cluster_profile_response_no_java['id']
-
 
 make_cluster_response = do_post("clusters/",
     {"name": cluster_name,
@@ -223,13 +240,18 @@ for host in server_list:
 # Request an install job to execute the installation and configuration of the
 # cluster. Until this point, we've been describing future state. Now LCM will
 # execute the changes necessary to achieve that state.
+concurrencyStrategy = "default"
+if (vnodes == 1):
+  concurrencyStrategy = "node-at-a-time"
+
+
 install_job = do_post("actions/install",
                      {"job-type":"install",
                       "job-scope":"cluster",
                       "resource-id":cluster_id,
 #                      "concurrency-strategy": "cluster-at-a-time",
 #                      "concurrency-strategy": "rack-per-dc-at-a-time",
-                      "concurrency-strategy": "default",
+                      "concurrency-strategy": concurrencyStrategy,
                       "continue-on-error":"false"})
 
 print("http://%s:8888" % server_ip)
