@@ -242,7 +242,7 @@ for host in server_list:
 # execute the changes necessary to achieve that state.
 concurrencyStrategy = "default"
 if (vnodes == 1):
-  concurrencyStrategy = "node-at-a-time"
+  concurrencyStrategy = "cluster-at-a-time"
 
 
 install_job = do_post("actions/install",
