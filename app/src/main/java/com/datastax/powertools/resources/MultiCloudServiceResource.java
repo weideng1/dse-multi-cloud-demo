@@ -47,7 +47,6 @@ public class MultiCloudServiceResource {
     }
 
     public MultiCloudServiceResource(MultiCloudServiceConfig config) {
-        // TODO: add managed here
         this.config = config;
     }
 
@@ -109,12 +108,13 @@ public class MultiCloudServiceResource {
     */
 
     private List<String> paramsToAWSString(HashMap<String, String> params) {
-        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","auth", "node_to_node", "password", "deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
+        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","auth", "node_to_node", "password", "deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type_azure", "instance_type_gcp", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
         Map<String, String> swapKeys = Map.of(
                 "org", "Org",
                 "deployerapp", "DeployerApp",
                 "nodes_aws", "DataCenterSize",
-                "createuser", "CreateUser"
+                "createuser", "CreateUser",
+                "instance_type_aws", "InstanceType"
                 );
 
         List<String> paramString = new ArrayList<>(Arrays.asList(
@@ -203,7 +203,6 @@ public class MultiCloudServiceResource {
         String publicKey = getPublicKey(privateKey);
         String paramsString = "zones:'us-east1-b'," +
                 "network:'default'," +
-                "machineType:'n1-standard-2'," +
                 "dataDiskType:'pd-ssd'," +
                 "diskSize:512," +
                 "sshKeyValue:'" + publicKey + "',";
@@ -217,6 +216,8 @@ public class MultiCloudServiceResource {
             }
             else if (paramKV.getKey().equals("nodes_gcp")){
                 paramsString+= String.format("%s:%s,", "nodesPerZone", paramKV.getValue());
+            }else if (paramKV.getKey().equals("instance_type_gcp")){
+                paramsString+= String.format("%s:%s,", "machineType", paramKV.getValue());
             }
             else {
                 paramsString+= String.format("%s:%s,", paramKV.getKey(), paramKV.getValue());
@@ -317,10 +318,11 @@ public class MultiCloudServiceResource {
         // \"adminPassword\": {\"value\": \"122130869@qq\"},
         // \"dnsNameForPublicIP\": {\"value\": \"jasontest321\"}}"
         // --template-uri https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/docker-simple-on-ubuntu/azuredeploy.json
-        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","password","auth","node_to_node","startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type", "num_clusters", "deploymentName"));
+        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","password","auth","node_to_node","startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type_aws", "instance_type_gcp", "instance_type", "num_clusters", "deploymentName"));
         Map<String, String> swapKeys = Map.of(
                 "createuser", "createUser",
-                "nodes_azure", "nodeCount"
+                "nodes_azure", "nodeCount",
+                "instance_type_azure", "vmSize"
         );
 
         String privateKey = params.get("ssh_key");
@@ -331,9 +333,6 @@ public class MultiCloudServiceResource {
                 "  },\n" +
                 "  \"diskSize\": {\n" +
                 "    \"value\": 512\n" +
-                "  },\n" +
-                "  \"vmSize\": {\n" +
-                "    \"value\": \"Standard_DS4_v2\"\n" +
                 "  },\n" +
                 "  \"namespace\": {\n" +
                 "    \"value\": \"dc0\"\n" +

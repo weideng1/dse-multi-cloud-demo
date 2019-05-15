@@ -31,5 +31,9 @@
   {
     "ParameterKey": "VolumeSize",
     "ParameterValue": "300"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "m4.large"
   }
 ]
