@@ -52,12 +52,6 @@ public class MultiCloudServiceResource {
 
     public Map<String, Object> createAwsDeployment(String deploymentName, String region, HashMap <String, String> params) {
 
-        try {
-            Thread.sleep(0);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
         if (region == null || deploymentName == null){
             logger.error("please provide region and deploymentName as query parameters");
             return null;
@@ -547,16 +541,30 @@ public class MultiCloudServiceResource {
         Thread thread = new Thread() {
             public void run() {
                 try {
-                    CompletableFuture<Map<String, Object>> awsFuture
-                            = CompletableFuture.supplyAsync(() -> createAwsDeployment(deploymentName, "us-east-2", params));
-                    CompletableFuture<Map<String, Object>> gcpFuture
-                            = CompletableFuture.supplyAsync(() -> createGcpDeployment(deploymentName, "ignored", params));
-                    CompletableFuture<Map<String, Object>> azureFuture
-                            = CompletableFuture.supplyAsync(() -> createAzureDeployment(deploymentName, "westus2", params));
+                    CompletableFuture<Map<String, Object>> awsFuture;
+                    CompletableFuture<Map<String, Object>> gcpFuture;
+                    CompletableFuture<Map<String, Object>> azureFuture;
+                    List<CompletableFuture<Map<String, Object>>> completableFutureList = new ArrayList<>();
+                    if (!params.get("nodes_aws").equals("0")){
+                        awsFuture
+                                = CompletableFuture.supplyAsync(() -> createAwsDeployment(deploymentName, "us-east-2", params));
+                        completableFutureList.add(awsFuture);
+                    }
+                    if (!params.get("nodes_gcp").equals("0")){
+                        gcpFuture
+                                = CompletableFuture.supplyAsync(() -> createGcpDeployment(deploymentName, "ignored", params));
+                        completableFutureList.add(gcpFuture);
+                    }
+                    if (!params.get("nodes_azure").equals("0")){
+                        azureFuture
+                                = CompletableFuture.supplyAsync(() -> createAzureDeployment(deploymentName, "westus2", params));
+                        completableFutureList.add(azureFuture);
+                    }
 
-                    String status = Stream.of(awsFuture, gcpFuture, azureFuture)
+                    //String status = Stream.of(awsFuture, gcpFuture, azureFuture)
+                    String status = Stream.of(completableFutureList.toArray())
                             //side-effect that writes to the stream output
-                            .map(is -> is.thenApplyAsync(streamU::streamToOut))
+                            .map(is -> ((CompletableFuture<Map<String, Object>>)is).thenApplyAsync(streamU::streamToOut))
                             .map(is -> is.thenApplyAsync(streamAndStatus -> (int) streamAndStatus.get("status")))
                             .map(streamU::getOr99)
                             .max(Comparator.naturalOrder()).get().toString();

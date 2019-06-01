@@ -50,6 +50,10 @@ while getopts 'hr:g:s:d:' opt; do
       physid=$(aws --region $region cloudformation describe-stack-resources --stack-name $stackname | \
        jq '.StackResources[] | select(.ResourceType=="AWS::AutoScaling::AutoScalingGroup") | .PhysicalResourceId' | tr -d '"')
 
+      if [ -z "$physid" ]; then
+        exit 1
+      fi
+
       instances=$(aws --region $region autoscaling describe-auto-scaling-groups --auto-scaling-group-names $physid | \
        jq ' .AutoScalingGroups[0] | .Instances[].InstanceId ' | tr "\n" " " | tr -d '"')
        cnt=0
