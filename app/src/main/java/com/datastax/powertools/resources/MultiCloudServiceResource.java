@@ -4,7 +4,10 @@ import ch.qos.logback.core.status.Status;
 import com.codahale.metrics.annotation.Timed;
 import com.datastax.powertools.MultiCloudServiceConfig;
 import com.datastax.powertools.StreamUtil;
+import com.datastax.powertools.api.AWSSubnet;
+import com.datastax.powertools.api.AWSSubnetDescription;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
@@ -20,8 +23,10 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.*;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -37,6 +42,7 @@ import static com.datastax.powertools.PBUtil.runPbAsString;
  */
 @Path("/v0/multi-cloud-service")
 public class MultiCloudServiceResource {
+    private ObjectMapper objectMapper = new ObjectMapper();
     private static final String STATUS_DELIMITER = ";;;STATUS;;;";
     private final MultiCloudServiceConfig config;
     private final static Logger logger = LoggerFactory.getLogger(MultiCloudServiceResource.class);
@@ -50,8 +56,11 @@ public class MultiCloudServiceResource {
         this.config = config;
     }
 
-    public Map<String, Object> createAwsDeployment(String deploymentName, String region, HashMap <String, String> params) {
-
+    public Map<String, Object> createAwsDeployment(String deploymentName, HashMap <String, String> params) {
+        String region = "us-east-2";
+        if (params.containsKey("region_aws")) {
+            region = params.get("region_aws");
+        }
         if (region == null || deploymentName == null){
             logger.error("please provide region and deploymentName as query parameters");
             return null;
@@ -102,7 +111,7 @@ public class MultiCloudServiceResource {
     */
 
     private List<String> paramsToAWSString(HashMap<String, String> params) {
-        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","auth", "node_to_node", "password", "deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type_azure", "instance_type_gcp", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "dse_version", "clusterName"));
+        ArrayList<String> extrasAWS = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","auth", "node_to_node", "password", "deploymentName","startup_parameter", "class_type", "num_tokens", "repo_uri", "instance_type_azure", "instance_type_gcp", "instance_type", "num_clusters", "nodes_gcp", "nodes_azure", "region_aws", "region_gcp", "region_azure", "dse_version", "clusterName"));
         Map<String, String> swapKeys = Map.of(
                 "org", "Org",
                 "deployerapp", "DeployerApp",
@@ -111,12 +120,47 @@ public class MultiCloudServiceResource {
                 "instance_type_aws", "InstanceType"
                 );
 
+        String region = "us-east-2";
+        if (params.containsKey("region_aws")) {
+            region = params.get("region_aws");
+        }else{
+            logger.warn("caller did not pick an aws region");
+        }
+
+        AWSSubnetDescription subnetDetails = awsDescribeSubnets(region);
+        String publicKey = getPublicKey(params.get("ssh_key"));
+
+        awsImportKey(publicKey, region);
+
+        String vpc = "vpc-75c83d1c";
+        String azs = "'us-east-2a,us-east-2b,us-east-2c'";
+        String subnets = "'subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4'";
+
+        if (subnetDetails != null){
+            List<AWSSubnet> subnetList = subnetDetails.getSubnets();
+
+            Stream<AWSSubnet> subnetStream = subnetList.stream().filter((subnet) -> subnet.isDefaultForAz());
+
+            final String defaultVpcId = subnetStream.map((subnet) -> subnet.getVpcId()).collect(Collectors.toList()).get(0);
+            vpc = defaultVpcId;
+
+            Supplier<Stream<AWSSubnet>> subnetStreamSupplier = () -> subnetList.stream().filter((subnet) -> subnet.getVpcId().equals(defaultVpcId));
+
+            azs = String.format("'%s'",subnetStreamSupplier.get()
+                    .map((subnet) -> subnet.getAvailabilityZone()).collect(Collectors.joining(",")));
+            subnets= String.format("'%s'",subnetStreamSupplier.get()
+                    .map((subnet) -> subnet.getSubnetId()).collect(Collectors.joining(",")));
+
+        }else{
+            logger.warn("Could not fetch subnet details from AWS. This should not happen");
+        }
+
         List<String> paramString = new ArrayList<>(Arrays.asList(
                 "ParameterKey=KeyName,ParameterValue=assethub-2019",
-                "ParameterKey=VPC,ParameterValue=vpc-75c83d1c",
-                "ParameterKey=AvailabilityZones,ParameterValue='us-east-2a,us-east-2b,us-east-2c'",
+                "ParameterKey=VPC,ParameterValue=" + vpc,
+                "ParameterKey=AvailabilityZones,ParameterValue=" + azs,
                 "ParameterKey=VolumeSize,ParameterValue=512",
-                "ParameterKey=Subnets,ParameterValue='subnet-4bc4ee01,subnet-5fcd3f36,subnet-ac485dd4'"));
+                "ParameterKey=Subnets,ParameterValue=" + subnets));
 
         // You can name loops in java in order to continue / break from the right loop when loops are nested
         paramLoop: for (Map.Entry<String, String> paramKV : params.entrySet()) {
@@ -137,19 +181,25 @@ public class MultiCloudServiceResource {
         return paramString;
     }
 
-    private HashMap<String, String> validateParams(HashMap<String, String> params) {
-        //TODO: make this an option
-        if (params.get("ssh_key") != null){
-            params.remove("ssh_key");
+    private void awsImportKey(String publicKey, String region) {
+        ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "import-key-pair",
+                "--key-name", "\"assethub-2019\"",
+                "--public-key-material",  "\"ssh-rsa " + publicKey + "\"",
+                "--region", region);
+        runPbAsString(pb);
+    }
+
+    private AWSSubnetDescription awsDescribeSubnets(String region) {
+
+        ProcessBuilder pb = new ProcessBuilder("aws", "ec2", "describe-subnets", "--region", region);
+        try {
+            AWSSubnetDescription subnets = objectMapper.readValue(runPbAsString(pb), AWSSubnetDescription.class);
+            return subnets;
+        } catch (IOException e) {
+            logger.error("subnet description request against AWS failed");
+            e.printStackTrace();
+            return null;
         }
-        //TODO: make this an option
-        if (params.get("region") != null){
-            params.remove("region");
-        }
-        if(params.get("createuser") == null){
-            params.put("createuser", "none");
-        }
-        return params;
     }
 
     @GET
@@ -166,8 +216,8 @@ public class MultiCloudServiceResource {
         return runPbAsInputStream(pb);
     }
 
-    public Map<String, Object> createGcpDeployment(String deploymentName, String region, HashMap<String, String> params) {
-        if (region == null || deploymentName == null){
+    public Map<String, Object> createGcpDeployment(String deploymentName, HashMap<String, String> params) {
+        if (deploymentName == null){
             logger.error("please provide region and deploymentName as query parameters");
             return null;
         }
@@ -192,17 +242,25 @@ public class MultiCloudServiceResource {
 
     private Map<String, String> paramsToGCPString(HashMap<String, String> params) {
         Map<String, String> paramsAndLabels = new HashMap<>();
-        //String paramsString = "\"zones:'us-east1-b'," +
+
+        String region = "us-east1-b";
+        if (params.containsKey("region_gcp")) {
+            region = params.get("region_gcp");
+        }else{
+            logger.warn("caller did not pick a gcp region");
+        }
+
         String privateKey = params.get("ssh_key");
         String publicKey = getPublicKey(privateKey);
-        String paramsString = "zones:'us-east1-b'," +
+        String paramsString = "zones:'"+region+"'," +
                 "network:'default'," +
                 "dataDiskType:'pd-ssd'," +
                 "diskSize:512," +
                 "sshKeyValue:'" + publicKey + "',";
         String labels = "";
         for (Map.Entry<String, String> paramKV : params.entrySet()) {
-            if (paramKV.getKey().equals("ssh_key")){
+            //TODO: maybe exclude other unnecessary params from this call
+            if (paramKV.getKey().equals("ssh_key") || paramKV.getKey().equals("region_gcp")){
                 continue;
             }
             if (paramKV.getKey().equals("deployerapp") || paramKV.getKey().equals("createuser") || paramKV.getKey().equals("org")){
@@ -237,14 +295,21 @@ public class MultiCloudServiceResource {
         return runPbAsInputStream(pb);
     }
 
-    public Map<String, Object> createAzureDeployment(String deploymentName, String region, HashMap<String, String> params) {
+    public Map<String, Object> createAzureDeployment(String deploymentName, HashMap<String, String> params) {
+
+        String region = "westus2";
+        if (params.containsKey("region_azure")) {
+            region = params.get("region_azure");
+        }else{
+            logger.warn("caller did not pick an azure region");
+        }
+
+
         if (region == null || deploymentName == null){
             logger.error("please provide region and deploymentName as query parameters");
             return null;
         }
 
-        //TODO: make dynamic
-        String azureRegion = "westus2";
         String paramString = paramsToAzureString(params);
 
         //ProcessBuilder pb = new ProcessBuilder("./deploy_azure.sh", "-l", region, "-g", deploymentName, "-p", paramString);
@@ -254,7 +319,7 @@ public class MultiCloudServiceResource {
                 "group",
                 "create",
                 "--name", deploymentName,
-                "--location", azureRegion,
+                "--location", region,
                 "--verbose"
         );
 
@@ -312,7 +377,7 @@ public class MultiCloudServiceResource {
         // \"adminPassword\": {\"value\": \"122130869@qq\"},
         // \"dnsNameForPublicIP\": {\"value\": \"jasontest321\"}}"
         // --template-uri https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/docker-simple-on-ubuntu/azuredeploy.json
-        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","password","auth","node_to_node","startup_parameter", "nodes_gcp", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type_aws", "instance_type_gcp", "instance_type", "num_clusters", "deploymentName"));
+        ArrayList<String> extrasAzure = new ArrayList<>(Arrays.asList("deployment_type","ssh_key","password","auth","node_to_node","startup_parameter", "nodes_gcp", "region_aws", "region_gcp", "region_azure", "num_tokens", "clusterName", "dse_version", "nodes_aws", "deployerapp", "instance_type_aws", "instance_type_gcp", "instance_type", "num_clusters", "deploymentName"));
         Map<String, String> swapKeys = Map.of(
                 "createuser", "createUser",
                 "nodes_azure", "nodeCount",
@@ -431,26 +496,28 @@ public class MultiCloudServiceResource {
     @Timed
     @Path("/gather-ips")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response gatherIps(@QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
-        if (region == null)
-            region = "us-east-2";
+    public Response gatherIps(@QueryParam("deploymentName") String deploymentName, @QueryParam("region_aws") String region_aws) {
+        // only AWS requires us to specify regions to gather IPs
+        if (region_aws == null || region_aws.equals("null"))
+            region_aws = "us-east-2";
         if (deploymentName == null) {
             logger.error("please provide deploymentName as a query parameter");
             return Response.serverError().status(Status.ERROR).build();
         }
-        ProcessBuilder pb = new ProcessBuilder("./gather_ips.sh", "-r", region, "-s", deploymentName, "-d", deploymentName, "-g", deploymentName);
+        ProcessBuilder pb = new ProcessBuilder("./gather_ips.sh", "-r", region_aws, "-s", deploymentName, "-d", deploymentName, "-g", deploymentName);
 
         return Response.ok(runPB(pb)).build();
     }
 
-    public String gatherIpsAsString(String deploymentName, String region) {
-        if (region == null)
-            region = "us-east-2";
+    public String gatherIpsAsString(String deploymentName, String awsRegion) {
+        // only AWS requires us to specify regions to gather IPs
+        if (awsRegion == null)
+            awsRegion = "us-east-2";
         if (deploymentName == null) {
             logger.error("please provide deploymentName as a query parameter");
             return "Please provide deploymentName as a query parameter";
         }
-        ProcessBuilder pb = new ProcessBuilder("./gather_ips.sh", "-r", region, "-s", deploymentName, "-d", deploymentName, "-g", deploymentName);
+        ProcessBuilder pb = new ProcessBuilder("./gather_ips.sh", "-r", awsRegion, "-s", deploymentName, "-d", deploymentName, "-g", deploymentName);
 
         return runPbAsString(pb);
     }
@@ -463,6 +530,10 @@ public class MultiCloudServiceResource {
     public Response lcmInstallDeployment(HashMap<String, String> params, @QueryParam("deploymentName") String deploymentName, @QueryParam("region") String region) {
         if (region == null)
             region = "us-east-2";
+        //Only AWS requires region to get params, we pick region_aws if available, otherwise we use the region query parameter
+        if (params.containsKey("region_aws")){
+            region = params.get("region_aws");
+        }
         if (deploymentName == null){
             logger.error("please provide deploymentName as a query parameter");
             return Response.serverError().status(Status.ERROR).build();
@@ -547,17 +618,17 @@ public class MultiCloudServiceResource {
                     List<CompletableFuture<Map<String, Object>>> completableFutureList = new ArrayList<>();
                     if (!params.get("nodes_aws").equals("0")){
                         awsFuture
-                                = CompletableFuture.supplyAsync(() -> createAwsDeployment(deploymentName, "us-east-2", params));
+                                = CompletableFuture.supplyAsync(() -> createAwsDeployment(deploymentName, params));
                         completableFutureList.add(awsFuture);
                     }
                     if (!params.get("nodes_gcp").equals("0")){
                         gcpFuture
-                                = CompletableFuture.supplyAsync(() -> createGcpDeployment(deploymentName, "ignored", params));
+                                = CompletableFuture.supplyAsync(() -> createGcpDeployment(deploymentName, params));
                         completableFutureList.add(gcpFuture);
                     }
                     if (!params.get("nodes_azure").equals("0")){
                         azureFuture
-                                = CompletableFuture.supplyAsync(() -> createAzureDeployment(deploymentName, "westus2", params));
+                                = CompletableFuture.supplyAsync(() -> createAzureDeployment(deploymentName, params));
                         completableFutureList.add(azureFuture);
                     }
 
@@ -591,9 +662,24 @@ public class MultiCloudServiceResource {
     @Timed
     @Path("/terminate-multi-cloud")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response terminateMultiCloudDeployment(@QueryParam("deploymentName") String deploymentName) {
+    public Response terminateMultiCloudDeployment(
+            @QueryParam("deploymentName") String deploymentName,
+            @QueryParam("region_aws") String region_aws,
+            @QueryParam("region_azure") String region_azure
+    ) {
         ChunkedOutput<String> out = new ChunkedOutput<>(String.class, "\n");
         StreamUtil streamU = new StreamUtil(out);
+
+        //set defaults if necessary
+        if (region_aws == null || region_aws.equals("null")){
+           region_aws = "us-east-2";
+        }
+        if (region_azure == null|| region_azure.equals("null")){
+           region_azure = "westus2";
+        }
+
+        final String awsRegion = region_aws;
+        final String azureRegion = region_azure;
 
         Thread thread = new Thread() {
             public void run() {
@@ -601,11 +687,11 @@ public class MultiCloudServiceResource {
 
                     // perform calls inside new thread to ensure we do not block
                     CompletableFuture<Map<String, Object>> awsFuture
-                            = CompletableFuture.supplyAsync(() -> terminateAwsDeployment(deploymentName, "us-east-2"));
+                            = CompletableFuture.supplyAsync(() -> terminateAwsDeployment(deploymentName, awsRegion));
                     CompletableFuture<Map<String, Object>> gcpFuture
                             = CompletableFuture.supplyAsync(() -> terminateGcpDeployment(deploymentName, "ignored"));
                     CompletableFuture<Map<String, Object>> azureFuture
-                            = CompletableFuture.supplyAsync(() -> terminateAzureDeployment(deploymentName, "westus2"));
+                            = CompletableFuture.supplyAsync(() -> terminateAzureDeployment(deploymentName, azureRegion));
 
 
                     String status = Stream.of(awsFuture, gcpFuture, azureFuture)
