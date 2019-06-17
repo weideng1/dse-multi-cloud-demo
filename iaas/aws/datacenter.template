@@ -496,6 +496,48 @@
             },
             "us-west-2": {
                 "US1604HVM": "ami-ca89eeb2"
+            },
+            "us-west-1": {
+                "US1604HVM": "ami-0c1b880a476bb7b40"
+            },
+            "ap-northeast-1": {
+                "US1604HVM": "ami-06c2c6531369e794f"
+            },
+            "ap-east-1": {
+                "US1604HVM": "ami-9ca0d8ed"
+            },
+            "ap-south-1": {
+                "US1604HVM": "ami-0c23ecb4ef5e8ef9a"
+            },
+            "ap-southeast-1": {
+                "US1604HVM": "ami-042d26cf3ef92e026"
+            },
+            "ca-central-1": {
+                "US1604HVM": "ami-0993e41d681c8f1fd"
+            },
+            "eu-north-1": {
+                "US1604HVM": "ami-cb058db5"
+            },
+            "sa-east-1": {
+                "US1604HVM": "ami-0be3df9b8bb0a5f23"
+            },
+            "us-gov-west-1": {
+                "US1604HVM": "ami-23fa8242"
+            },
+            "us-gov-east-1": {
+                "US1604HVM": "ami-7fc2230e"
+            },
+            "ap-northeast-2": {
+                "US1604HVM": "ami-030b841cf36fd3728"
+            },
+            "eu-west-2": {
+                "US1604HVM": "ami-0d7b406d323c92daa"
+            },
+            "ap-northeast-3": {
+                "US1604HVM": "ami-00fa1d7017fe42b3b"
+            },
+            "eu-west-3": {
+                "US1604HVM": "ami-081ed14fbc4fdc308"
             }
         }
     },
