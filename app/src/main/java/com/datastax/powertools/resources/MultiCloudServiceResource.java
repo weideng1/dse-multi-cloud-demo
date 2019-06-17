@@ -519,7 +519,23 @@ public class MultiCloudServiceResource {
         }
         ProcessBuilder pb = new ProcessBuilder("./gather_ips.sh", "-r", awsRegion, "-s", deploymentName, "-d", deploymentName, "-g", deploymentName);
 
-        return runPbAsString(pb);
+        String ips = runPbAsString(pb);
+        List<String> cleanIpList = new ArrayList<>();
+
+        String[] nodes = ips.split("\n");
+        for (String node : nodes) {
+            String[] nodeDeets = node.split(":");
+            if (nodeDeets.length != 4) {
+                continue;
+            }
+            if (nodeDeets.length < 4) {
+                continue;
+            }
+            cleanIpList.add(node);
+        }
+        String cleanIps = cleanIpList.stream().collect(Collectors.joining("\n"));
+
+        return cleanIps;
     }
 
     @POST
